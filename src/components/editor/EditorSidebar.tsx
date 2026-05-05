@@ -38,8 +38,17 @@ const nodeTypes: {
 ];
 
 export default function EditorSidebar() {
-  const { nodes, addNode, selectNode, selectedId, deleteNode, updateNode, addNodeToColumn } =
-    useEditorStore();
+  const {
+    nodes,
+    addNode,
+    selectNode,
+    selectedId,
+    deleteNode,
+    updateNode,
+    addNodeToColumn,
+    updateColumnNode,
+    deleteColumnNode,
+  } = useEditorStore();
 
   // کدوم ستون داره icon picker رو نشون میده
   const [pickerTarget, setPickerTarget] = useState<{
@@ -60,22 +69,20 @@ export default function EditorSidebar() {
     });
   }
 
-  // function handleIconSelected(icon: string, label: string) {
-  //   if (!pickerTarget) return;
-  //   const { nodeId, colId } = pickerTarget;
-  //   const node = nodes.find((n) => n.id === nodeId);
-  //   if (!node?.columns) return;
-
-  //   const updatedColumns = node.columns.map((col) =>
-  //     col.id === colId
-  //       ? { ...col, items: [...col.items, { icon, label }] }
-  //       : col,
-  //   );
-  //   updateNode(nodeId, { columns: updatedColumns });
-  //   setPickerTarget(null);
-  // }
-
-  // پیدا کردن columns nodes برای نمایش در لایه‌ها
+  function handleIconSelected(icon: string, label: string) {
+    if (!pickerTarget) return;
+    const { nodeId, colId } = pickerTarget;
+    addNodeToColumn(nodeId, colId, "paragraph");
+    const node = nodes.find((n) => n.id === nodeId);
+    if (!node?.columns) return;
+    const col = node.columns.find((c) => c.id === colId);
+    if (!col) return;
+    const lastNode = col.nodes[col.nodes.length - 1];
+    if (lastNode) {
+      updateColumnNode(nodeId, colId, lastNode.id, { content: label });
+    }
+    setPickerTarget(null);
+  }
   const selectedNode = nodes.find((n) => n.id === selectedId);
   const [colCount, setColCount] = useState(2);
 
@@ -167,28 +174,75 @@ export default function EditorSidebar() {
           </div>
         </div>
 
-        {/* اگه columns node انتخاب شده — مدیریت ستون‌ها */}
         {selectedNode?.type === "columns" && (
           <div className="p-3 border-b border-slate-800">
             <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-2 px-1">
               Columns
             </p>
             <div className="space-y-3">
-              {selectedNode.columns?.map((col) => (
+              {selectedNode.columns?.map((col, colIndex) => (
                 <div key={col.id} className="bg-slate-800 rounded-xl p-2.5">
-                  {/* لیست نودهای موجود */}
-                  <div className="space-y-1 mb-2">
+                  {/* عنوان ستون */}
+                  <p className="text-slate-500 text-xs mb-2">
+                    Column {colIndex + 1}
+                  </p>
+
+                  {/* لیست نودها با قابلیت edit و delete */}
+                  <div className="space-y-1.5 mb-2">
+                    {col.nodes.length === 0 && (
+                      <p className="text-slate-600 text-xs italic px-1">
+                        Empty
+                      </p>
+                    )}
                     {col.nodes.map((cn) => (
                       <div
                         key={cn.id}
-                        className="flex items-center gap-2 bg-slate-700 rounded-lg px-2 py-1"
+                        className="bg-slate-700 rounded-lg p-2 space-y-1"
                       >
-                        <span className="text-slate-400 text-xs">
-                          {cn.type}
-                        </span>
-                        <span className="text-slate-300 text-xs flex-1 truncate">
-                          {cn.content?.slice(0, 20) || "—"}
-                        </span>
+                        {/* نوع نود + دکمه حذف */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500 text-[10px] uppercase tracking-wider">
+                            {cn.type}
+                          </span>
+                          <button
+                            onClick={() =>
+                              deleteColumnNode(selectedNode.id, col.id, cn.id)
+                            }
+                            className="text-slate-600 hover:text-red-400 transition"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+
+                        {/* input برای متن */}
+                        {cn.type !== "image" && (
+                          <input
+                            type="text"
+                            value={cn.content ?? ""}
+                            onChange={(e) =>
+                              updateColumnNode(selectedNode.id, col.id, cn.id, {
+                                content: e.target.value,
+                              })
+                            }
+                            className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1 text-white text-xs outline-none focus:border-indigo-500 transition"
+                            placeholder="Type here..."
+                          />
+                        )}
+
+                        {/* input برای image URL */}
+                        {cn.type === "image" && (
+                          <input
+                            type="text"
+                            value={cn.content ?? ""}
+                            onChange={(e) =>
+                              updateColumnNode(selectedNode.id, col.id, cn.id, {
+                                content: e.target.value,
+                              })
+                            }
+                            className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1 text-white text-xs outline-none focus:border-indigo-500 transition"
+                            placeholder="https://image-url..."
+                          />
+                        )}
                       </div>
                     ))}
                   </div>

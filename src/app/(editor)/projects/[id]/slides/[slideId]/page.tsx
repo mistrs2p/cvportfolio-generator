@@ -7,6 +7,7 @@ import EditorSidebar from "@/components/editor/EditorSidebar";
 import SlideCanvas from "@/components/editor/SlideCanvas";
 import PropertiesPanel from "@/components/editor/PropertiesPanel";
 import EditorHeader from "@/components/editor/EditorHeader";
+import SlideListPanel from '@/components/editor/SlideListPanel'
 
 export default function SlideEditorPage() {
   const { id, slideId } = useParams<{ id: string; slideId: string }>();
@@ -45,6 +46,7 @@ export default function SlideEditorPage() {
     <div className="h-screen flex flex-col bg-slate-950 overflow-hidden">
       <EditorHeader projectId={id} slideId={slideId} onSave={save} />
       <div className="flex flex-1 overflow-hidden">
+         <SlideListPanel /> 
         <EditorSidebar />
         <SlideCanvas />
         <PropertiesPanel />

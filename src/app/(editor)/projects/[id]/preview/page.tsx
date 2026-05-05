@@ -249,28 +249,28 @@ function SlideNodeRenderer({ node }: { node: SlideNode }) {
     40: "text-5xl",
   };
 
-  const fontSize = node.style.fontSize ?? 16;
+  const fontSize = node.style?.fontSize ?? 16;
   const closestSize = Object.keys(fontSizeMap)
     .map(Number)
     .reduce((a, b) =>
       Math.abs(b - fontSize) < Math.abs(a - fontSize) ? b : a,
     );
 
-  // ─── image ───────────────────────────────────────
+  // ─── Image ─────────────────────────────────────────────────────────────────
   if (node.type === "image") {
     return node.content ? (
       <div className="shrink-0" style={{ maxHeight: "200px" }}>
         <img
           src={node.content}
           alt=""
-          className="rounded-xl object-cover"
+          className="rounded-xl object-cover w-full"
           style={{ maxHeight: "200px", maxWidth: "100%" }}
         />
       </div>
     ) : null;
   }
 
-  // ─── columns (جدید) ──────────────────────────────
+  // ─── Columns ───────────────────────────────────────────────────────────────
   if (node.type === "columns") {
     return (
       <div
@@ -280,23 +280,55 @@ function SlideNodeRenderer({ node }: { node: SlideNode }) {
         }}
       >
         {node.columns?.map((col) => (
-          <div key={col.id} className="flex flex-col gap-3">
-            {/* عنوان ستون */}
-            <h4 className="text-indigo-400 font-semibold text-sm uppercase tracking-wider border-b border-slate-700 pb-2">
-              {col.title}
-            </h4>
-            {/* آیتم‌ها */}
+          <div key={col.id} className="flex flex-col gap-2">
+            {/* عنوان ستون — اگر وجود داشت */}
+            {col.title && (
+              <h4 className="text-indigo-400 font-semibold text-sm uppercase tracking-wider border-b border-slate-700 pb-2">
+                {col.title}
+              </h4>
+            )}
+
+            {/* المان‌های ستون */}
             <div className="flex flex-col gap-2">
-              {col.items.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-3">
-                  <img
-                    src={`https://cdn.simpleicons.org/${item.icon}/ffffff`}
-                    alt={item.label}
-                    className="w-5 h-5 object-contain shrink-0"
-                  />
-                  <span className="text-slate-200 text-sm">{item.label}</span>
-                </div>
-              ))}
+              {!col.nodes || col.nodes.length === 0 ? (
+                <p className="text-slate-600 text-xs italic">Empty column</p>
+              ) : (
+                col.nodes.map((cn) => {
+                  if (cn.type === "image") {
+                    return cn.content ? (
+                      <img
+                        key={cn.id}
+                        src={cn.content}
+                        alt=""
+                        className="w-full rounded-lg object-cover max-h-32"
+                      />
+                    ) : (
+                      <div
+                        key={cn.id}
+                        className="h-12 bg-slate-800/50 rounded-lg flex items-center justify-center"
+                      >
+                        <p className="text-slate-500 text-xs">No image</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <p
+                      key={cn.id}
+                      style={{
+                        color: cn.style?.color ?? "#ffffff",
+                        fontSize: cn.style?.fontSize
+                          ? `${cn.style.fontSize}px`
+                          : "14px",
+                        fontWeight: cn.style?.fontWeight ?? undefined,
+                      }}
+                      className={cn.style?.italic ? "italic" : ""}
+                    >
+                      {cn.content}
+                    </p>
+                  );
+                })
+              )}
             </div>
           </div>
         ))}
@@ -304,18 +336,20 @@ function SlideNodeRenderer({ node }: { node: SlideNode }) {
     );
   }
 
-  // ─── text nodes (title / paragraph / section) ────
+  // ─── Text nodes ────────────────────────────────────────────────────────────
   return (
     <p
-      className={`
-        shrink-0 leading-snug
-        ${fontSizeMap[closestSize]}
-        ${node.style?.fontWeight === "bold" ? "font-bold" : ""}
-        ${node.style?.fontWeight === "semibold" ? "font-semibold" : ""}
-        ${node.style?.fontWeight === "medium" ? "font-medium" : ""}
-        ${node.style?.italic ? "italic" : ""}
-        text-${node.style?.textAlign ?? "left"}
-      `}
+      className={[
+        "shrink-0 leading-snug",
+        fontSizeMap[closestSize],
+        node.style?.fontWeight === "bold" ? "font-bold" : "",
+        node.style?.fontWeight === "semibold" ? "font-semibold" : "",
+        node.style?.fontWeight === "medium" ? "font-medium" : "",
+        node.style?.italic ? "italic" : "",
+        `text-${node.style?.textAlign ?? "left"}`,
+      ]
+        .filter(Boolean)
+        .join(" ")}
       style={{ color: node.style?.color ?? "#ffffff" }}
     >
       {node.content}
