@@ -14,7 +14,7 @@ interface Props {
 export default function Header({ user }: Props) {
   return (
     <header className="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 shrink-0">
-      <h1 className="text-white font-semibold text-lg">داشبورد</h1>
+      <h1 className="text-white font-semibold text-lg">Dashboard</h1>
 
       <div className="flex items-center gap-3">
         {/* Avatar */}
@@ -41,7 +41,7 @@ export default function Header({ user }: Props) {
           className="flex items-center gap-1.5 text-slate-400 hover:text-red-400 transition text-sm px-3 py-1.5 rounded-lg hover:bg-slate-800"
         >
           <LogOut className="w-4 h-4" />
-          خروج
+          Logout
         </button>
       </div>
     </header>

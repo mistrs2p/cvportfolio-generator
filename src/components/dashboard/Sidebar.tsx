@@ -6,9 +6,9 @@ import { LayoutDashboard, FolderOpen, Settings } from "lucide-react";
 import clsx from "clsx";
 
 const navItems = [
-  { href: "/dashboard", label: "داشبورد", icon: LayoutDashboard },
-  { href: "/projects", label: "پروژه‌ها", icon: FolderOpen },
-  { href: "/settings", label: "تنظیمات", icon: Settings },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  // { href: "/dashboard", label: "Projects", icon: FolderOpen },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export default function Sidebar() {

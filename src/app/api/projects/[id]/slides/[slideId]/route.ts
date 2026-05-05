@@ -4,6 +4,19 @@ import { prisma } from "@/lib/db/prisma";
 
 type Params = { params: Promise<{ id: string; slideId: string }> };
 
+// GET — single slide
+export async function GET(req: Request, { params }: Params) {
+  const session = await auth();
+  if (!session)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { slideId } = await params;
+  const slide = await prisma.slide.findUnique({ where: { id: slideId } });
+  if (!slide) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  return NextResponse.json(slide);
+}
+
 // PATCH — update slide nodes
 export async function PATCH(req: Request, { params }: Params) {
   const session = await auth();
