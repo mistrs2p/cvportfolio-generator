@@ -21,6 +21,12 @@ export async function GET(
   const slides = await prisma.slide.findMany({
     where: { projectId: id },
     orderBy: { order: "asc" },
+    select: {
+      id: true,
+      title: true,
+      order: true,
+      nodes: true,
+    },
   });
 
   return NextResponse.json(slides);
