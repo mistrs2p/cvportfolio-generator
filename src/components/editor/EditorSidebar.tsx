@@ -3,7 +3,14 @@
 import { useState } from "react";
 import { useEditorStore } from "@/store/editorStore";
 import { NodeType, SlideNode } from "@/types/slide";
-import { Type, AlignLeft, Heading2, Image, Trash2, Columns2 } from "lucide-react";
+import {
+  Type,
+  AlignLeft,
+  Heading2,
+  Image,
+  Trash2,
+  Columns2,
+} from "lucide-react";
 import clsx from "clsx";
 import { nanoid } from "nanoid";
 import IconPickerModal from "@/components/editor/IconPickerModal";
@@ -14,10 +21,20 @@ const nodeTypes: {
   icon: React.ElementType;
   desc: string;
 }[] = [
-  { type: "title",     label: "Title",     icon: Type,     desc: "Main slide heading" },
-  { type: "section",   label: "Section",   icon: Heading2, desc: "Sub-section heading" },
-  { type: "paragraph", label: "Paragraph", icon: AlignLeft,desc: "Body text block" },
-  { type: "image",     label: "Image",     icon: Image,    desc: "Image via URL" },
+  { type: "title", label: "Title", icon: Type, desc: "Main slide heading" },
+  {
+    type: "section",
+    label: "Section",
+    icon: Heading2,
+    desc: "Sub-section heading",
+  },
+  {
+    type: "paragraph",
+    label: "Paragraph",
+    icon: AlignLeft,
+    desc: "Body text block",
+  },
+  { type: "image", label: "Image", icon: Image, desc: "Image via URL" },
 ];
 
 export default function EditorSidebar() {
@@ -30,7 +47,7 @@ export default function EditorSidebar() {
     colId: string;
   } | null>(null);
 
-  function addColumnsNode(count: 2 | 3) {
+  function addColumnsNode(count: number) {
     const id = nanoid();
     addNode("columns", {
       id,
@@ -53,7 +70,7 @@ export default function EditorSidebar() {
     const updatedColumns = node.columns.map((col) =>
       col.id === colId
         ? { ...col, items: [...col.items, { icon, label }] }
-        : col
+        : col,
     );
     updateNode(nodeId, { columns: updatedColumns });
     setPickerTarget(null);
@@ -61,6 +78,7 @@ export default function EditorSidebar() {
 
   // پیدا کردن columns nodes برای نمایش در لایه‌ها
   const selectedNode = nodes.find((n) => n.id === selectedId);
+  const [colCount, setColCount] = useState(2);
 
   return (
     <>
@@ -88,7 +106,7 @@ export default function EditorSidebar() {
             ))}
 
             {/* ─── Columns ─── */}
-            <div className="pt-1 border-t border-slate-800 mt-1">
+            {/* <div className="pt-1 border-t border-slate-800 mt-1">
               <p className="text-slate-600 text-xs px-1 mb-1">Layouts</p>
               <button
                 onClick={() => addColumnsNode(2)}
@@ -114,6 +132,38 @@ export default function EditorSidebar() {
                   <p className="text-slate-600 text-xs">Three column layout</p>
                 </div>
               </button>
+            </div> */}
+
+            <div className="bg-slate-800 rounded-xl p-3">
+              <p className="text-slate-400 text-xs mb-2">Number of columns</p>
+
+              {/* Stepper */}
+              <div className="flex items-center gap-2 mb-2">
+                <button
+                  onClick={() => setColCount((p) => Math.max(1, p - 1))}
+                  className="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center transition"
+                >
+                  −
+                </button>
+                <span className="text-white text-sm font-medium w-6 text-center">
+                  {colCount}
+                </span>
+                <button
+                  onClick={() => setColCount((p) => Math.min(6, p + 1))}
+                  className="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center transition"
+                >
+                  +
+                </button>
+              </div>
+
+              {/* دکمه Add */}
+              <button
+                onClick={() => addColumnsNode(colCount)}
+                className="w-full bg-violet-600 hover:bg-violet-500 text-white text-xs font-medium py-2 rounded-lg transition flex items-center justify-center gap-2"
+              >
+                <Columns2 className="w-3.5 h-3.5" />
+                Add {colCount} Column{colCount > 1 ? "s" : ""}
+              </button>
             </div>
           </div>
         </div>
@@ -133,7 +183,7 @@ export default function EditorSidebar() {
                     value={col.title}
                     onChange={(e) => {
                       const updated = selectedNode.columns!.map((c) =>
-                        c.id === col.id ? { ...c, title: e.target.value } : c
+                        c.id === col.id ? { ...c, title: e.target.value } : c,
                       );
                       updateNode(selectedNode.id, { columns: updated });
                     }}
@@ -164,7 +214,7 @@ export default function EditorSidebar() {
                                     ...c,
                                     items: c.items.filter((_, i) => i !== idx),
                                   }
-                                : c
+                                : c,
                             );
                             updateNode(selectedNode.id, { columns: updated });
                           }}
@@ -213,7 +263,7 @@ export default function EditorSidebar() {
                   "flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition group",
                   selectedId === node.id
                     ? "bg-indigo-600/20 border border-indigo-500/30"
-                    : "hover:bg-slate-800 border border-transparent"
+                    : "hover:bg-slate-800 border border-transparent",
                 )}
               >
                 <div className="flex items-center gap-2 min-w-0">
@@ -225,14 +275,14 @@ export default function EditorSidebar() {
                       "text-xs font-medium truncate",
                       selectedId === node.id
                         ? "text-indigo-300"
-                        : "text-slate-300"
+                        : "text-slate-300",
                     )}
                   >
                     {node.type === "image"
                       ? "Image"
                       : node.type === "columns"
-                      ? `Columns (${node.columns?.length ?? 0})`
-                      : node.content?.slice(0, 20) || node.type}
+                        ? `Columns (${node.columns?.length ?? 0})`
+                        : node.content?.slice(0, 20) || node.type}
                   </span>
                 </div>
                 <button
