@@ -118,13 +118,26 @@ export interface BadgeNode {
 
 // ─── Column Node ─────────────────────────────────────────────────────────────
 
-export interface ColumnNode {
+export type ColumnContentType = "title" | "paragraph" | "image" | "section";
+
+export interface ColumnContentNode {
   id: string;
-  type: "column";
-  width?: string; // e.g. "1fr", "2fr", "300px"
-  nodes: ContentNode[];
+  type: ColumnContentType;
+  content?: string; // برای text/paragraph/title
+  src?: string; // برای image
+  style: {
+    fontSize?: number;
+    fontWeight?: "normal" | "medium" | "semibold" | "bold";
+    textAlign?: "left" | "center" | "right";
+    color?: string;
+    italic?: boolean;
+  };
 }
 
+export interface ColumnNode {
+  id: string;
+  nodes: ColumnContentNode[]; // به جای items
+}
 // ─── Row Node (Layout) ───────────────────────────────────────────────────────
 
 export interface RowNode {
@@ -202,7 +215,7 @@ export type SlideNodeType =
   | "paragraph"
   | "section"
   | "image"
-  | "columns" // ← جدید
+  | "columns"; // ← جدید
 
 export interface SlideNode {
   id: string;
@@ -221,10 +234,4 @@ export interface SlideNode {
 export interface SkillItem {
   icon: string; // نام آیکون در Simple Icons (مثلا "react", "mongodb")
   label: string; // متن زیر آیکون
-}
-
-export interface ColumnNode {
-  id: string;
-  title: string;
-  items: SkillItem[];
 }

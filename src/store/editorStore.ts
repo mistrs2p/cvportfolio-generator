@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { SlideNode } from "@/types/slide";
+import { ColumnContentNode, ColumnContentType, SlideNode } from "@/types/slide";
 import { nanoid } from "nanoid";
 
 interface EditorState {
@@ -12,6 +12,11 @@ interface EditorState {
   addNode: (type: SlideNode["type"], overrides?: Partial<SlideNode>) => void;
   updateNode: (id: string, changes: Partial<SlideNode>) => void;
   deleteNode: (id: string) => void;
+  addNodeToColumn: (
+    nodeId: string,
+    colId: string,
+    type: ColumnContentType,
+  ) => void;
   selectNode: (id: string | null) => void;
   reorderNodes: (nodes: SlideNode[]) => void;
   setIsSaving: (v: boolean) => void;
@@ -98,6 +103,60 @@ export const useEditorStore = create<EditorState>((set) => ({
     set((state) => ({
       nodes: state.nodes.filter((n) => n.id !== id),
       selectedId: state.selectedId === id ? null : state.selectedId,
+      isDirty: true,
+    })),
+  addNodeToColumn: (nodeId: string, colId: string, type: ColumnContentType) =>
+    set((state) => ({
+      nodes: state.nodes.map((n) =>
+        n.id === nodeId
+          ? {
+              ...n,
+              columns: n.columns?.map((col) =>
+                col.id === colId
+                  ? {
+                      ...col,
+                      nodes: [
+                        ...col.nodes,
+                        {
+                          id: nanoid(),
+                          type,
+                          content: type === "image" ? "" : "Click to edit...",
+                          style: defaultStyle[type],
+                        },
+                      ],
+                    }
+                  : col,
+              ),
+            }
+          : n,
+      ),
+      isDirty: true,
+    })),
+
+  updateColumnNode: (
+    nodeId: string,
+    colId: string,
+    cnId: string,
+    changes: Partial<ColumnContentNode>,
+  ) =>
+    set((state) => ({
+      nodes: state.nodes.map((n) =>
+        n.id === nodeId
+          ? {
+              ...n,
+              columns: n.columns?.map((col) =>
+                col.id === colId
+                  ? {
+                      ...col,
+                      nodes: col.nodes.map((cn) =>
+                        cn.id === cnId ? { ...cn, ...changes } : cn,
+                      ),
+                    }
+                  : col,
+              ),
+            }
+          : n,
+      ),
       isDirty: true,
     })),
 

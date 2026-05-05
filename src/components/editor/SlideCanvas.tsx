@@ -1,7 +1,7 @@
 "use client";
 
 import { useEditorStore } from "@/store/editorStore";
-import { SlideNode } from "@/types/slide";
+import { ColumnContentNode, SlideNode } from "@/types/slide";
 import clsx from "clsx";
 
 export default function SlideCanvas() {
@@ -120,27 +120,13 @@ function CanvasNode({
           }}
         >
           {node.columns?.map((col) => (
-            <div key={col.id} className="flex flex-col gap-2">
-              <h4 className="text-indigo-400 font-semibold text-xs uppercase tracking-wider border-b border-slate-700 pb-1.5">
-                {col.title || "Untitled"}
-              </h4>
-              {col.items.length === 0 ? (
-                <p className="text-slate-600 text-xs">No items yet</p>
+            <div key={col.id} className="flex flex-col gap-2 min-h-15">
+              {col.nodes.length === 0 ? (
+                <p className="text-slate-600 text-xs italic">Empty column</p>
               ) : (
-                <div className="flex flex-col gap-1.5">
-                  {col.items.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <img
-                        src={`https://cdn.simpleicons.org/${item.icon}/ffffff`}
-                        alt={item.label}
-                        className="w-4 h-4 object-contain shrink-0"
-                      />
-                      <span className="text-slate-200 text-xs">
-                        {item.label}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                col.nodes.map((cn) => (
+                  <ColumnContentNodeRenderer key={cn.id} node={cn} />
+                ))
               )}
             </div>
           ))}
@@ -179,5 +165,32 @@ function CanvasNode({
         {node.content}
       </p>
     </div>
+  );
+}
+
+function ColumnContentNodeRenderer({ node }: { node: ColumnContentNode }) {
+  if (node.type === "image") {
+    return node.content ? (
+      <img
+        src={node.content}
+        alt=""
+        className="w-full rounded-lg object-cover max-h-32"
+      />
+    ) : (
+      <div className="h-16 bg-slate-800 rounded-lg flex items-center justify-center">
+        <p className="text-slate-500 text-xs">No image URL</p>
+      </div>
+    );
+  }
+  return (
+    <p
+      style={{ color: node.style.color, fontSize: node.style.fontSize }}
+      className={clsx(
+        node.style.fontWeight === "bold" && "font-bold",
+        node.style.italic && "italic",
+      )}
+    >
+      {node.content}
+    </p>
   );
 }
