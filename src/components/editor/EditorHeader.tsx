@@ -4,6 +4,8 @@ import Link from "next/link";
 import { ArrowLeft, Save, Loader2, CheckCheck } from "lucide-react";
 import { useEditorStore } from "@/store/editorStore";
 
+import { Eye } from "lucide-react";
+
 interface Props {
   projectId: string;
   slideId: string;
@@ -54,6 +56,13 @@ export default function EditorHeader({ projectId, onSave }: Props) {
           <Save className="w-3.5 h-3.5" />
           Save
         </button>
+        <Link
+          href={`/projects/${projectId}/preview`}
+          className="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition"
+        >
+          <Eye className="w-3.5 h-3.5" />
+          Preview
+        </Link>
       </div>
     </header>
   );
