@@ -256,6 +256,7 @@ function SlideNodeRenderer({ node }: { node: SlideNode }) {
       Math.abs(b - fontSize) < Math.abs(a - fontSize) ? b : a,
     );
 
+  // ─── image ───────────────────────────────────────
   if (node.type === "image") {
     return node.content ? (
       <div className="shrink-0" style={{ maxHeight: "200px" }}>
@@ -269,18 +270,53 @@ function SlideNodeRenderer({ node }: { node: SlideNode }) {
     ) : null;
   }
 
+  // ─── columns (جدید) ──────────────────────────────
+  if (node.type === "columns") {
+    return (
+      <div
+        className="grid gap-6 w-full shrink-0"
+        style={{
+          gridTemplateColumns: `repeat(${node.columns?.length ?? 2}, 1fr)`,
+        }}
+      >
+        {node.columns?.map((col) => (
+          <div key={col.id} className="flex flex-col gap-3">
+            {/* عنوان ستون */}
+            <h4 className="text-indigo-400 font-semibold text-sm uppercase tracking-wider border-b border-slate-700 pb-2">
+              {col.title}
+            </h4>
+            {/* آیتم‌ها */}
+            <div className="flex flex-col gap-2">
+              {col.items.map((item, idx) => (
+                <div key={idx} className="flex items-center gap-3">
+                  <img
+                    src={`https://cdn.simpleicons.org/${item.icon}/ffffff`}
+                    alt={item.label}
+                    className="w-5 h-5 object-contain shrink-0"
+                  />
+                  <span className="text-slate-200 text-sm">{item.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // ─── text nodes (title / paragraph / section) ────
   return (
     <p
       className={`
         shrink-0 leading-snug
         ${fontSizeMap[closestSize]}
-        ${node.style.fontWeight === "bold" ? "font-bold" : ""}
-        ${node.style.fontWeight === "semibold" ? "font-semibold" : ""}
-        ${node.style.fontWeight === "medium" ? "font-medium" : ""}
-        ${node.style.italic ? "italic" : ""}
-        text-${node.style.textAlign ?? "left"}
+        ${node.style?.fontWeight === "bold" ? "font-bold" : ""}
+        ${node.style?.fontWeight === "semibold" ? "font-semibold" : ""}
+        ${node.style?.fontWeight === "medium" ? "font-medium" : ""}
+        ${node.style?.italic ? "italic" : ""}
+        text-${node.style?.textAlign ?? "left"}
       `}
-      style={{ color: node.style.color ?? "#ffffff" }}
+      style={{ color: node.style?.color ?? "#ffffff" }}
     >
       {node.content}
     </p>

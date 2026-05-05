@@ -101,6 +101,54 @@ function CanvasNode({
     );
   }
 
+  // ─── columns ───────────────────────────────────────
+  if (node.type === "columns") {
+    return (
+      <div
+        onClick={onSelect}
+        className={clsx(
+          "rounded-xl border-2 transition cursor-pointer p-3 shrink-0",
+          isSelected
+            ? "border-indigo-500"
+            : "border-transparent hover:border-slate-700",
+        )}
+      >
+        <div
+          className="grid gap-4"
+          style={{
+            gridTemplateColumns: `repeat(${node.columns?.length ?? 2}, 1fr)`,
+          }}
+        >
+          {node.columns?.map((col) => (
+            <div key={col.id} className="flex flex-col gap-2">
+              <h4 className="text-indigo-400 font-semibold text-xs uppercase tracking-wider border-b border-slate-700 pb-1.5">
+                {col.title || "Untitled"}
+              </h4>
+              {col.items.length === 0 ? (
+                <p className="text-slate-600 text-xs">No items yet</p>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {col.items.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <img
+                        src={`https://cdn.simpleicons.org/${item.icon}/ffffff`}
+                        alt={item.label}
+                        className="w-4 h-4 object-contain shrink-0"
+                      />
+                      <span className="text-slate-200 text-xs">
+                        {item.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       onClick={onSelect}

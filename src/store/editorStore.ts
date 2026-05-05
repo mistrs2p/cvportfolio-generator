@@ -9,7 +9,7 @@ interface EditorState {
   isSaving: boolean;
 
   setNodes: (nodes: SlideNode[]) => void;
-  addNode: (type: SlideNode["type"]) => void;
+  addNode: (type: SlideNode["type"], overrides?: Partial<SlideNode>) => void;
   updateNode: (id: string, changes: Partial<SlideNode>) => void;
   deleteNode: (id: string) => void;
   selectNode: (id: string | null) => void;
@@ -19,19 +19,44 @@ interface EditorState {
 }
 
 const defaultStyle = {
-  title:     { fontSize: 36, fontWeight: "bold" as const, textAlign: "left" as const, color: "#ffffff" },
-  paragraph: { fontSize: 16, fontWeight: "normal" as const, textAlign: "left" as const, color: "#94a3b8" },
-  section:   { fontSize: 22, fontWeight: "semibold" as const, textAlign: "left" as const, color: "#818cf8" },
-  image:     { fontSize: 16, fontWeight: "normal" as const, textAlign: "center" as const, color: "#ffffff" },
+  title: {
+    fontSize: 36,
+    fontWeight: "bold" as const,
+    textAlign: "left" as const,
+    color: "#ffffff",
+  },
+  paragraph: {
+    fontSize: 16,
+    fontWeight: "normal" as const,
+    textAlign: "left" as const,
+    color: "#94a3b8",
+  },
+  section: {
+    fontSize: 22,
+    fontWeight: "semibold" as const,
+    textAlign: "left" as const,
+    color: "#818cf8",
+  },
+  image: {
+    fontSize: 16,
+    fontWeight: "normal" as const,
+    textAlign: "center" as const,
+    color: "#ffffff",
+  },
+  columns: {
+    fontSize: 16,
+    fontWeight: "normal" as const,
+    textAlign: "left" as const,
+    color: "#ffffff",
+  },
 };
-
 const defaultContent = {
-  title:     "Slide Title",
+  title: "Slide Title",
   paragraph: "Write your paragraph here...",
-  section:   "Section Heading",
-  image:     "",
+  section: "Section Heading",
+  image: "",
+  columns: "",
 };
-
 export const useEditorStore = create<EditorState>((set) => ({
   nodes: [],
   selectedId: null,
@@ -40,7 +65,7 @@ export const useEditorStore = create<EditorState>((set) => ({
 
   setNodes: (nodes) => set({ nodes, isDirty: false }),
 
-  addNode: (type) =>
+  addNode: (type, overrides) =>
     set((state) => ({
       nodes: [
         ...state.nodes,
@@ -49,6 +74,7 @@ export const useEditorStore = create<EditorState>((set) => ({
           type,
           content: defaultContent[type],
           style: defaultStyle[type],
+          ...overrides,
         },
       ],
       isDirty: true,
@@ -57,7 +83,13 @@ export const useEditorStore = create<EditorState>((set) => ({
   updateNode: (id, changes) =>
     set((state) => ({
       nodes: state.nodes.map((n) =>
-        n.id === id ? { ...n, ...changes, style: { ...n.style, ...(changes.style ?? {}) } } : n
+        n.id === id
+          ? {
+              ...n,
+              ...changes,
+              style: { ...n.style, ...(changes.style ?? {}) },
+            }
+          : n,
       ),
       isDirty: true,
     })),

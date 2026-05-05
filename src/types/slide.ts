@@ -196,14 +196,19 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
-
-
-export type NodeType = "title" | "paragraph" | "section" | "image";
+export type NodeType = "title" | "paragraph" | "section" | "image" | "columns";
+export type SlideNodeType =
+  | "title"
+  | "paragraph"
+  | "section"
+  | "image"
+  | "columns" // ← جدید
 
 export interface SlideNode {
   id: string;
-  type: NodeType;
-  content: string;
+  type: SlideNodeType;
+  content?: string;
+  columns?: ColumnNode[];
   style: {
     fontSize?: number;
     fontWeight?: "normal" | "medium" | "semibold" | "bold";
@@ -211,4 +216,15 @@ export interface SlideNode {
     color?: string;
     italic?: boolean;
   };
+}
+
+export interface SkillItem {
+  icon: string; // نام آیکون در Simple Icons (مثلا "react", "mongodb")
+  label: string; // متن زیر آیکون
+}
+
+export interface ColumnNode {
+  id: string;
+  title: string;
+  items: SkillItem[];
 }
