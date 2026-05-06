@@ -11,6 +11,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
+import { SlideView } from "@/components/shared/SlideRenderer";
+import { useEditorStore } from "@/store/editorStore";
 
 interface Slide {
   id: string;
@@ -19,6 +21,10 @@ interface Slide {
   nodes: SlideNode[];
 }
 
+// Canvas dimensions must match SlideCanvas for pixel-perfect parity
+const CANVAS_W = 800;
+const CANVAS_H = Math.round(CANVAS_W * (9 / 16)); // 450
+
 export default function PreviewPage() {
   const { id } = useParams<{ id: string }>();
   const [slides, setSlides] = useState<Slide[]>([]);
@@ -26,6 +32,7 @@ export default function PreviewPage() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
+const { slideSettings } = useEditorStore()
 
   useEffect(() => {
     async function load() {
@@ -50,16 +57,13 @@ export default function PreviewPage() {
   async function handleExport() {
     if (!exportRef.current) return;
     setExporting(true);
-
     try {
       const { default: html2canvas } = await import("html2canvas-pro");
       const { default: jsPDF } = await import("jspdf");
 
       const slideEls =
         exportRef.current.querySelectorAll<HTMLElement>(".export-slide");
-
       if (slideEls.length === 0) {
-        console.warn("No slides found");
         setExporting(false);
         return;
       }
@@ -75,21 +79,18 @@ export default function PreviewPage() {
         const canvas = await html2canvas(slideEls[i], {
           scale: 2,
           useCORS: true,
-          backgroundColor: "#0f172a",
+          backgroundColor: slideSettings.backgroundColor,
           allowTaint: true,
           logging: false,
           width: slideEls[i].offsetWidth,
           height: slideEls[i].offsetHeight,
         });
-
         const imgData = canvas.toDataURL("image/jpeg", 0.95);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-
+        const pdfW = pdf.internal.pageSize.getWidth();
+        const pdfH = pdf.internal.pageSize.getHeight();
         if (i > 0) pdf.addPage();
-        pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+        pdf.addImage(imgData, "JPEG", 0, 0, pdfW, pdfH);
       }
-
       pdf.save(`presentation-${id}.pdf`);
     } catch (err) {
       console.error("Export failed:", err);
@@ -110,6 +111,7 @@ export default function PreviewPage() {
 
   return (
     <div className="h-screen bg-slate-950 flex flex-col">
+      {/* Top bar */}
       <div className="h-12 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 shrink-0">
         <Link
           href={`/projects/${id}`}
@@ -139,15 +141,21 @@ export default function PreviewPage() {
         </button>
       </div>
 
+      {/* Slide viewport */}
       <div className="flex-1 flex items-center justify-center p-8 overflow-hidden">
         {slides.length === 0 || !slide ? (
           <p className="text-slate-500 text-sm">No slides in this project</p>
         ) : (
           <div
-            className="bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 relative overflow-hidden w-full"
-            style={{ maxWidth: "960px", aspectRatio: "16/9" }}
+            className="bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 relative overflow-hidden"
+            style={{
+              width: CANVAS_W,
+              height: CANVAS_H,
+              maxWidth: "100%",
+              flexShrink: 0,
+            }}
           >
-            <SlidePreview slide={slide} />
+            <SlideView nodes={slide.nodes} />
 
             {current > 0 && (
               <button
@@ -169,6 +177,7 @@ export default function PreviewPage() {
         )}
       </div>
 
+      {/* Dot navigation */}
       {slides.length > 1 && (
         <div className="flex items-center justify-center gap-2 pb-4 shrink-0">
           {slides.map((_, i) => (
@@ -185,6 +194,7 @@ export default function PreviewPage() {
         </div>
       )}
 
+      {/* Off-screen PDF export container */}
       <div
         ref={exportRef}
         className="fixed -left-[9999px] top-0 pointer-events-none"
@@ -201,140 +211,10 @@ export default function PreviewPage() {
               position: "relative",
             }}
           >
-            <SlidePreview slide={s} />
+            <SlideView nodes={s.nodes} settings={slideSettings} />
           </div>
         ))}
       </div>
     </div>
-  );
-}
-
-function SlidePreview({ slide }: { slide: Slide }) {
-  if (!slide?.nodes?.length) {
-    return (
-      <div className="absolute inset-0 flex items-center justify-center">
-        <p className="text-slate-600 text-sm">Empty slide</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="absolute inset-0 p-10 flex flex-col gap-4 overflow-hidden">
-      {slide.nodes.map((node) => (
-        <SlideNodeRenderer key={node.id} node={node} />
-      ))}
-    </div>
-  );
-}
-
-function SlideNodeRenderer({ node }: { node: SlideNode }) {
-  const fontSizeMap: Record<number, string> = {
-    12: "text-xs",
-    14: "text-sm",
-    16: "text-base",
-    18: "text-lg",
-    20: "text-lg",
-    22: "text-xl",
-    24: "text-2xl",
-    28: "text-2xl",
-    30: "text-3xl",
-    32: "text-3xl",
-    36: "text-4xl",
-    40: "text-5xl",
-    48: "text-6xl",
-  };
-
-  const fontSize = node.style?.fontSize ?? 16;
-  const closestSize = Object.keys(fontSizeMap)
-    .map(Number)
-    .reduce((a, b) =>
-      Math.abs(b - fontSize) < Math.abs(a - fontSize) ? b : a,
-    );
-
-  if (node.type === "image") {
-    return node.content ? (
-      <div className="shrink-0" style={{ maxHeight: "200px" }}>
-        <img
-          src={node.content}
-          alt=""
-          className="rounded-xl object-cover w-full"
-          style={{ maxHeight: "200px", maxWidth: "100%" }}
-        />
-      </div>
-    ) : null;
-  }
-
-  if (node.type === "columns") {
-    return (
-      <div
-        className="grid gap-6 w-full shrink-0"
-        style={{
-          gridTemplateColumns: `repeat(${node.columns?.length ?? 2}, 1fr)`,
-        }}
-      >
-        {node.columns?.map((col) => (
-          <div key={col.id} className="flex flex-col gap-2">
-            {!col.nodes || col.nodes.length === 0 ? (
-              <p className="text-slate-600 text-xs italic">Empty column</p>
-            ) : (
-              col.nodes.map((cn) => {
-                if (cn.type === "image") {
-                  return cn.content ? (
-                    <img
-                      key={cn.id}
-                      src={cn.content}
-                      alt=""
-                      className="w-full rounded-lg object-cover max-h-32"
-                    />
-                  ) : (
-                    <div
-                      key={cn.id}
-                      className="h-12 bg-slate-800/50 rounded-lg flex items-center justify-center"
-                    >
-                      <p className="text-slate-500 text-xs">No image</p>
-                    </div>
-                  );
-                }
-
-                return (
-                  <p
-                    key={cn.id}
-                    style={{
-                      color: cn.style?.color ?? "#ffffff",
-                      fontSize: cn.style?.fontSize
-                        ? `${cn.style.fontSize}px`
-                        : "14px",
-                      fontWeight: cn.style?.fontWeight ?? "normal",
-                      fontStyle: cn.style?.italic ? "italic" : "normal",
-                    }}
-                  >
-                    {cn.content}
-                  </p>
-                );
-              })
-            )}
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <p
-      className={[
-        "shrink-0 leading-snug",
-        fontSizeMap[closestSize],
-        `text-${node.style?.textAlign ?? "left"}`,
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      style={{
-        color: node.style?.color ?? "#ffffff",
-        fontWeight: node.style?.fontWeight ?? "normal",
-        fontStyle: node.style?.italic ? "italic" : "normal",
-      }}
-    >
-      {node.content}
-    </p>
   );
 }

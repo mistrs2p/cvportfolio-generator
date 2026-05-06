@@ -50,3 +50,20 @@ export interface Theme {
   section: string   // رنگ پیش‌فرض section
   accent: string    // رنگ accent (column border, ...)
 }
+
+export interface SlideSettings {
+  padding: number
+  gap: number
+  canvasWidth: number
+  backgroundColor: string
+  backgroundType: 'solid' | 'gradient'
+  gradientFrom: string
+  gradientTo: string
+  gradientAngle: number
+}
+
+export const DEFAULT_SLIDE_SETTINGS: SlideSettings = {
+  padding: 32, gap: 16, canvasWidth: 800,
+  backgroundColor: '#0f172a', backgroundType: 'solid',
+  gradientFrom: '#0f172a', gradientTo: '#1e3a5f', gradientAngle: 135,
+}

@@ -26,9 +26,26 @@ import { clsx } from "clsx";
 import { Trash2, Plus, GripVertical } from "lucide-react";
 
 export default function SlideCanvas() {
-  const { nodes, selectedId, selectNode, reorderNodes } = useEditorStore();
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const { nodes, selectedId, selectNode, reorderNodes, slideSettings } =
+    useEditorStore();
 
+  const {
+    padding,
+    gap,
+    canvasWidth,
+    backgroundColor,
+    backgroundType,
+    gradientFrom,
+    gradientTo,
+    gradientAngle,
+  } = slideSettings;
+  const canvasHeight = Math.round((canvasWidth * 9) / 16);
+
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const getBackground =
+    backgroundType === "gradient"
+      ? `linear-gradient(${gradientAngle}deg, #${gradientFrom}, #${gradientTo})`
+      : `#${backgroundColor}`;
   const sensors = useSensors(
     useSensor(PointerSensor, {
       // فقط بعد از ۸px حرکت، drag شروع شه — کلیک‌های عادی مختل نشن
@@ -62,7 +79,11 @@ export default function SlideCanvas() {
     >
       <div
         className="bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 w-full relative overflow-hidden"
-        style={{ maxWidth: 800, aspectRatio: "16/9" }}
+        style={{
+          width: canvasWidth,
+          height: canvasHeight,
+          background: getBackground,
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {nodes.length === 0 ? (
@@ -82,7 +103,10 @@ export default function SlideCanvas() {
               items={nodes.map((n) => n.id)}
               strategy={verticalListSortingStrategy}
             >
-              <div className="absolute inset-0 p-8 flex flex-col gap-4 overflow-hidden">
+              <div
+                className="absolute inset-0  flex flex-col  overflow-hidden"
+                style={{ padding, gap }}
+              >
                 {nodes.map((node) => (
                   <SortableCanvasNode
                     key={node.id}

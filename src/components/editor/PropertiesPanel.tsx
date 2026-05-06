@@ -227,8 +227,8 @@ export default function PropertiesPanel() {
 
   // ─── حالت ۲: node اصلی انتخاب شده ───────────────────────────────────────────
   const node = nodes.find((n) => n.id === selectedId);
-  if (!node) return <EmptyPanel />;
-
+  // if (!node) return <EmptyPanel />;
+  if (!node) return <SlideSettingsPanel />;
   return (
     <aside className="w-56 bg-slate-900 border-l border-slate-800 overflow-y-auto shrink-0">
       <div className="p-4 space-y-5">
@@ -411,6 +411,204 @@ function EmptyPanel() {
       <p className="text-slate-600 text-xs text-center px-4">
         Select an element to edit its properties
       </p>
+    </aside>
+  );
+}
+// در EmptyPanel، به جای فقط "Select an element"،
+// یه بخش Slide Settings اضافه کن:
+
+function SlideSettingsPanel() {
+  const { slideSettings, updateSlideSettings, resetSlideSettings } =
+    useEditorStore();
+  const {
+    padding,
+    gap,
+    canvasWidth,
+    backgroundColor,
+    backgroundType,
+    gradientFrom,
+    gradientTo,
+    gradientAngle,
+  } = slideSettings;
+
+  return (
+    <aside className="w-56 bg-slate-900 border-l border-slate-800 overflow-y-auto shrink-0">
+      <div className="p-4 space-y-5">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">
+            Slide Settings
+          </p>
+          <button
+            onClick={resetSlideSettings}
+            className="text-slate-600 hover:text-slate-400 text-xs transition"
+          >
+            Reset
+          </button>
+        </div>
+
+        {/* Canvas Size */}
+        <div>
+          <label className="block text-slate-400 text-xs mb-1.5">
+            Canvas Width (px)
+          </label>
+          <input
+            type="number"
+            min={400}
+            max={1920}
+            step={10}
+            value={canvasWidth}
+            onChange={(e) =>
+              updateSlideSettings({ canvasWidth: Number(e.target.value) })
+            }
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs outline-none focus:border-indigo-500 transition"
+          />
+          <p className="text-slate-600 text-xs mt-1">
+            Height: {Math.round((canvasWidth * 9) / 16)}px (16:9)
+          </p>
+        </div>
+
+        {/* Padding */}
+        <div>
+          <label className="block text-slate-400 text-xs mb-1.5">
+            Padding: {padding}px
+          </label>
+          <input
+            type="range"
+            min={0}
+            max={80}
+            step={4}
+            value={padding}
+            onChange={(e) =>
+              updateSlideSettings({ padding: Number(e.target.value) })
+            }
+            className="w-full accent-indigo-500"
+          />
+        </div>
+
+        {/* Gap */}
+        <div>
+          <label className="block text-slate-400 text-xs mb-1.5">
+            Element Gap: {gap}px
+          </label>
+          <input
+            type="range"
+            min={0}
+            max={48}
+            step={4}
+            value={gap}
+            onChange={(e) =>
+              updateSlideSettings({ gap: Number(e.target.value) })
+            }
+            className="w-full accent-indigo-500"
+          />
+        </div>
+
+        {/* Background Type */}
+        <div>
+          <label className="block text-slate-400 text-xs mb-1.5">
+            Background
+          </label>
+          <div className="grid grid-cols-2 gap-1">
+            {(["solid", "gradient"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => updateSlideSettings({ backgroundType: t })}
+                className={clsx(
+                  "py-1.5 rounded-lg text-xs capitalize transition",
+                  backgroundType === t
+                    ? "bg-indigo-600 text-white"
+                    : "bg-slate-800 text-slate-400 hover:bg-slate-700",
+                )}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Solid color */}
+        {backgroundType === "solid" && (
+          <div>
+            <label className="block text-slate-400 text-xs mb-1.5">Color</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={`#${backgroundColor}`}
+                onChange={(e) =>
+                  updateSlideSettings({
+                    backgroundColor: e.target.value.replace("#", ""),
+                  })
+                }
+                className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent"
+              />
+              <span className="text-slate-400 text-xs font-mono">
+                #{backgroundColor}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Gradient */}
+        {backgroundType === "gradient" && (
+          <>
+            <div>
+              <label className="block text-slate-400 text-xs mb-1.5">
+                From
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={`#${gradientFrom}`}
+                  onChange={(e) =>
+                    updateSlideSettings({
+                      gradientFrom: e.target.value.replace("#", ""),
+                    })
+                  }
+                  className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent"
+                />
+                <span className="text-slate-400 text-xs font-mono">
+                  #{gradientFrom}
+                </span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-slate-400 text-xs mb-1.5">To</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={`#${gradientTo}`}
+                  onChange={(e) =>
+                    updateSlideSettings({
+                      gradientTo: e.target.value.replace("#", ""),
+                    })
+                  }
+                  className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent"
+                />
+                <span className="text-slate-400 text-xs font-mono">
+                  #{gradientTo}
+                </span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-slate-400 text-xs mb-1.5">
+                Angle: {gradientAngle}°
+              </label>
+              <input
+                type="range"
+                min={0}
+                max={360}
+                step={15}
+                value={gradientAngle}
+                onChange={(e) =>
+                  updateSlideSettings({ gradientAngle: Number(e.target.value) })
+                }
+                className="w-full accent-indigo-500"
+              />
+            </div>
+          </>
+        )}
+      </div>
     </aside>
   );
 }

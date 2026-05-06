@@ -2,6 +2,7 @@ import { create } from "zustand";
 import {
   ColumnContentNode,
   ColumnContentType,
+  DEFAULT_SLIDE_SETTINGS,
   NodeType,
   SelectedColumnItem,
   SlideNode,
@@ -18,7 +19,7 @@ interface EditorState {
   isSaving: boolean;
   history: SlideNode[][];
   future: SlideNode[][];
-
+  slideSettings: typeof DEFAULT_SLIDE_SETTINGS;
   setNodes: (nodes: SlideNode[]) => void;
   addNode: (type: NodeType, overrides?: Partial<SlideNode>) => void;
   updateNode: (id: string, changes: Partial<SlideNode>) => void;
@@ -46,6 +47,11 @@ interface EditorState {
 
   undo: () => void;
   redo: () => void;
+
+  updateSlideSettings: (
+    changes: Partial<typeof DEFAULT_SLIDE_SETTINGS>,
+  ) => void;
+  resetSlideSettings: () => void;
 }
 
 function pushHistory(
@@ -117,6 +123,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   isSaving: false,
   history: [],
   future: [],
+  slideSettings: DEFAULT_SLIDE_SETTINGS,
 
   setNodes: (nodes) =>
     set({
@@ -309,4 +316,13 @@ export const useEditorStore = create<EditorState>((set) => ({
         isDirty: true,
       };
     }),
+
+  updateSlideSettings: (changes) =>
+    set((s) => ({
+      slideSettings: { ...s.slideSettings, ...changes },
+      isDirty: true,
+    })),
+
+  resetSlideSettings: () =>
+    set(() => ({ slideSettings: DEFAULT_SLIDE_SETTINGS, isDirty: true })),
 }));
