@@ -37,3 +37,16 @@ export interface SelectedColumnItem {
   colId: string;
   cnId?: string; 
 }
+
+// types/slide.ts
+export type ThemeId = 'dark-pro' | 'ocean' | 'sunset' | 'forest' | 'light-clean'
+
+export interface Theme {
+  id: ThemeId
+  label: string
+  bg: string        // رنگ پس‌زمینه اسلاید
+  title: string     // رنگ پیش‌فرض title
+  paragraph: string // رنگ پیش‌فرض paragraph
+  section: string   // رنگ پیش‌فرض section
+  accent: string    // رنگ accent (column border, ...)
+}

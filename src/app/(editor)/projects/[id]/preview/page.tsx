@@ -37,7 +37,6 @@ export default function PreviewPage() {
     load();
   }, [id]);
 
-  // Keyboard navigation
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "ArrowRight")
@@ -107,11 +106,10 @@ export default function PreviewPage() {
     );
   }
 
-  const slide = slides[current];
+  const slide = slides[current] ?? null;
 
   return (
     <div className="h-screen bg-slate-950 flex flex-col">
-      {/* Top Bar */}
       <div className="h-12 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 shrink-0">
         <Link
           href={`/projects/${id}`}
@@ -123,13 +121,13 @@ export default function PreviewPage() {
 
         <div className="flex items-center gap-2 text-slate-400 text-sm">
           <span>
-            {current + 1} / {slides.length}
+            {slides.length > 0 ? `${current + 1} / ${slides.length}` : "0 / 0"}
           </span>
         </div>
 
         <button
           onClick={handleExport}
-          disabled={exporting}
+          disabled={exporting || slides.length === 0}
           className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition"
         >
           {exporting ? (
@@ -141,9 +139,8 @@ export default function PreviewPage() {
         </button>
       </div>
 
-      {/* Slide Preview */}
       <div className="flex-1 flex items-center justify-center p-8 overflow-hidden">
-        {slides.length === 0 ? (
+        {slides.length === 0 || !slide ? (
           <p className="text-slate-500 text-sm">No slides in this project</p>
         ) : (
           <div
@@ -152,7 +149,6 @@ export default function PreviewPage() {
           >
             <SlidePreview slide={slide} />
 
-            {/* Navigation arrows */}
             {current > 0 && (
               <button
                 onClick={() => setCurrent((p) => p - 1)}
@@ -173,33 +169,30 @@ export default function PreviewPage() {
         )}
       </div>
 
-      {/* Dot navigation */}
       {slides.length > 1 && (
         <div className="flex items-center justify-center gap-2 pb-4 shrink-0">
           {slides.map((_, i) => (
             <button
               key={i}
               onClick={() => setCurrent(i)}
-              className={`w-2 h-2 rounded-full transition ${
+              className={`h-2 rounded-full transition-all ${
                 i === current
                   ? "bg-indigo-400 w-4"
-                  : "bg-slate-600 hover:bg-slate-400"
+                  : "bg-slate-600 hover:bg-slate-400 w-2"
               }`}
             />
           ))}
         </div>
       )}
 
-      {/* Hidden export container — all slides stacked */}
-      {/* Hidden export container — فقط برای PDF */}
       <div
         ref={exportRef}
-        className="fixed -left-2499.75 top-0 pointer-events-none"
+        className="fixed -left-[9999px] top-0 pointer-events-none"
         aria-hidden="true"
       >
-        {slides.map((slide) => (
+        {slides.map((s) => (
           <div
-            key={slide.id}
+            key={s.id}
             className="export-slide bg-slate-900"
             style={{
               width: 1280,
@@ -208,15 +201,13 @@ export default function PreviewPage() {
               position: "relative",
             }}
           >
-            <SlidePreview slide={slide} />
+            <SlidePreview slide={s} />
           </div>
         ))}
       </div>
     </div>
   );
 }
-
-// ─── Shared Slide Renderer ────────────────────────────────────────────────────
 
 function SlidePreview({ slide }: { slide: Slide }) {
   if (!slide?.nodes?.length) {
@@ -242,11 +233,15 @@ function SlideNodeRenderer({ node }: { node: SlideNode }) {
     14: "text-sm",
     16: "text-base",
     18: "text-lg",
+    20: "text-lg",
     22: "text-xl",
+    24: "text-2xl",
     28: "text-2xl",
+    30: "text-3xl",
     32: "text-3xl",
     36: "text-4xl",
     40: "text-5xl",
+    48: "text-6xl",
   };
 
   const fontSize = node.style?.fontSize ?? 16;
@@ -256,7 +251,6 @@ function SlideNodeRenderer({ node }: { node: SlideNode }) {
       Math.abs(b - fontSize) < Math.abs(a - fontSize) ? b : a,
     );
 
-  // ─── Image ─────────────────────────────────────────────────────────────────
   if (node.type === "image") {
     return node.content ? (
       <div className="shrink-0" style={{ maxHeight: "200px" }}>
@@ -270,7 +264,6 @@ function SlideNodeRenderer({ node }: { node: SlideNode }) {
     ) : null;
   }
 
-  // ─── Columns ───────────────────────────────────────────────────────────────
   if (node.type === "columns") {
     return (
       <div
@@ -281,76 +274,65 @@ function SlideNodeRenderer({ node }: { node: SlideNode }) {
       >
         {node.columns?.map((col) => (
           <div key={col.id} className="flex flex-col gap-2">
-            {/* عنوان ستون — اگر وجود داشت */}
-            {col.title && (
-              <h4 className="text-indigo-400 font-semibold text-sm uppercase tracking-wider border-b border-slate-700 pb-2">
-                {col.title}
-              </h4>
-            )}
-
-            {/* المان‌های ستون */}
-            <div className="flex flex-col gap-2">
-              {!col.nodes || col.nodes.length === 0 ? (
-                <p className="text-slate-600 text-xs italic">Empty column</p>
-              ) : (
-                col.nodes.map((cn) => {
-                  if (cn.type === "image") {
-                    return cn.content ? (
-                      <img
-                        key={cn.id}
-                        src={cn.content}
-                        alt=""
-                        className="w-full rounded-lg object-cover max-h-32"
-                      />
-                    ) : (
-                      <div
-                        key={cn.id}
-                        className="h-12 bg-slate-800/50 rounded-lg flex items-center justify-center"
-                      >
-                        <p className="text-slate-500 text-xs">No image</p>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <p
+            {!col.nodes || col.nodes.length === 0 ? (
+              <p className="text-slate-600 text-xs italic">Empty column</p>
+            ) : (
+              col.nodes.map((cn) => {
+                if (cn.type === "image") {
+                  return cn.content ? (
+                    <img
                       key={cn.id}
-                      style={{
-                        color: cn.style?.color ?? "#ffffff",
-                        fontSize: cn.style?.fontSize
-                          ? `${cn.style.fontSize}px`
-                          : "14px",
-                        fontWeight: cn.style?.fontWeight ?? undefined,
-                      }}
-                      className={cn.style?.italic ? "italic" : ""}
+                      src={cn.content}
+                      alt=""
+                      className="w-full rounded-lg object-cover max-h-32"
+                    />
+                  ) : (
+                    <div
+                      key={cn.id}
+                      className="h-12 bg-slate-800/50 rounded-lg flex items-center justify-center"
                     >
-                      {cn.content}
-                    </p>
+                      <p className="text-slate-500 text-xs">No image</p>
+                    </div>
                   );
-                })
-              )}
-            </div>
+                }
+
+                return (
+                  <p
+                    key={cn.id}
+                    style={{
+                      color: cn.style?.color ?? "#ffffff",
+                      fontSize: cn.style?.fontSize
+                        ? `${cn.style.fontSize}px`
+                        : "14px",
+                      fontWeight: cn.style?.fontWeight ?? "normal",
+                      fontStyle: cn.style?.italic ? "italic" : "normal",
+                    }}
+                  >
+                    {cn.content}
+                  </p>
+                );
+              })
+            )}
           </div>
         ))}
       </div>
     );
   }
 
-  // ─── Text nodes ────────────────────────────────────────────────────────────
   return (
     <p
       className={[
         "shrink-0 leading-snug",
         fontSizeMap[closestSize],
-        node.style?.fontWeight === "bold" ? "font-bold" : "",
-        node.style?.fontWeight === "semibold" ? "font-semibold" : "",
-        node.style?.fontWeight === "medium" ? "font-medium" : "",
-        node.style?.italic ? "italic" : "",
         `text-${node.style?.textAlign ?? "left"}`,
       ]
         .filter(Boolean)
         .join(" ")}
-      style={{ color: node.style?.color ?? "#ffffff" }}
+      style={{
+        color: node.style?.color ?? "#ffffff",
+        fontWeight: node.style?.fontWeight ?? "normal",
+        fontStyle: node.style?.italic ? "italic" : "normal",
+      }}
     >
       {node.content}
     </p>

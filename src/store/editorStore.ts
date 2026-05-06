@@ -8,26 +8,26 @@ import {
 } from "@/types/slide";
 import { nanoid } from "nanoid";
 
-// ─── State Interface ──────────────────────────────────────────────────────────
+const MAX_HISTORY = 50;
+
 interface EditorState {
   nodes: SlideNode[];
   selectedId: string | null;
   selectedColumnItem: SelectedColumnItem | null;
   isDirty: boolean;
   isSaving: boolean;
+  history: SlideNode[][];
+  future: SlideNode[][];
 
-  // Node actions
   setNodes: (nodes: SlideNode[]) => void;
   addNode: (type: NodeType, overrides?: Partial<SlideNode>) => void;
   updateNode: (id: string, changes: Partial<SlideNode>) => void;
   deleteNode: (id: string) => void;
   reorderNodes: (nodes: SlideNode[]) => void;
 
-  // Selection
   selectNode: (id: string | null) => void;
   selectColumnItem: (item: SelectedColumnItem | null) => void;
 
-  // Column node actions
   addNodeToColumn: (
     nodeId: string,
     colId: string,
@@ -41,12 +41,23 @@ interface EditorState {
   ) => void;
   deleteColumnNode: (nodeId: string, colId: string, cnId: string) => void;
 
-  // Save state
   setIsSaving: (v: boolean) => void;
   setIsDirty: (v: boolean) => void;
+
+  undo: () => void;
+  redo: () => void;
 }
 
-// ─── Default Styles ───────────────────────────────────────────────────────────
+function pushHistory(
+  history: SlideNode[][],
+  current: SlideNode[],
+): SlideNode[][] {
+  const next = [...history, current];
+  return next.length > MAX_HISTORY
+    ? next.slice(next.length - MAX_HISTORY)
+    : next;
+}
+
 const defaultStyle: Record<NodeType, SlideNode["style"]> = {
   title: {
     fontSize: 36,
@@ -98,15 +109,24 @@ const defaultColumnStyle: Record<
   image: { fontSize: 14, fontWeight: "normal", color: "#ffffff" },
 };
 
-// ─── Store ────────────────────────────────────────────────────────────────────
 export const useEditorStore = create<EditorState>((set) => ({
   nodes: [],
   selectedId: null,
   selectedColumnItem: null,
   isDirty: false,
   isSaving: false,
+  history: [],
+  future: [],
 
-  setNodes: (nodes) => set({ nodes, isDirty: false }),
+  setNodes: (nodes) =>
+    set({
+      nodes,
+      isDirty: false,
+      history: [],
+      future: [],
+      selectedId: null,
+      selectedColumnItem: null,
+    }),
 
   addNode: (type, overrides) =>
     set((state) => ({
@@ -128,6 +148,8 @@ export const useEditorStore = create<EditorState>((set) => ({
           ...overrides,
         },
       ],
+      history: pushHistory(state.history, state.nodes),
+      future: [],
       isDirty: true,
     })),
 
@@ -135,9 +157,15 @@ export const useEditorStore = create<EditorState>((set) => ({
     set((state) => ({
       nodes: state.nodes.map((n) =>
         n.id === id
-          ? { ...n, ...changes, style: { ...n.style, ...changes.style } }
+          ? {
+              ...n,
+              ...changes,
+              style: changes.style ? { ...n.style, ...changes.style } : n.style,
+            }
           : n,
       ),
+      history: pushHistory(state.history, state.nodes),
+      future: [],
       isDirty: true,
     })),
 
@@ -149,10 +177,18 @@ export const useEditorStore = create<EditorState>((set) => ({
         state.selectedColumnItem?.nodeId === id
           ? null
           : state.selectedColumnItem,
+      history: pushHistory(state.history, state.nodes),
+      future: [],
       isDirty: true,
     })),
 
-  reorderNodes: (nodes) => set({ nodes, isDirty: true }),
+  reorderNodes: (nodes) =>
+    set((state) => ({
+      nodes,
+      history: pushHistory(state.history, state.nodes),
+      future: [],
+      isDirty: true,
+    })),
 
   selectNode: (id) => set({ selectedId: id, selectedColumnItem: null }),
 
@@ -184,6 +220,8 @@ export const useEditorStore = create<EditorState>((set) => ({
             }
           : n,
       ),
+      history: pushHistory(state.history, state.nodes),
+      future: [],
       isDirty: true,
     })),
 
@@ -202,7 +240,9 @@ export const useEditorStore = create<EditorState>((set) => ({
                           ? {
                               ...cn,
                               ...changes,
-                              style: { ...cn.style, ...changes.style },
+                              style: changes.style
+                                ? { ...cn.style, ...changes.style }
+                                : cn.style,
                             }
                           : cn,
                       ),
@@ -212,6 +252,8 @@ export const useEditorStore = create<EditorState>((set) => ({
             }
           : n,
       ),
+      history: pushHistory(state.history, state.nodes),
+      future: [],
       isDirty: true,
     })),
 
@@ -223,7 +265,10 @@ export const useEditorStore = create<EditorState>((set) => ({
               ...n,
               columns: n.columns?.map((col) =>
                 col.id === colId
-                  ? { ...col, nodes: col.nodes.filter((cn) => cn.id !== cnId) }
+                  ? {
+                      ...col,
+                      nodes: col.nodes.filter((cn) => cn.id !== cnId),
+                    }
                   : col,
               ),
             }
@@ -233,9 +278,35 @@ export const useEditorStore = create<EditorState>((set) => ({
         state.selectedColumnItem?.cnId === cnId
           ? null
           : state.selectedColumnItem,
+      history: pushHistory(state.history, state.nodes),
+      future: [],
       isDirty: true,
     })),
 
   setIsSaving: (v) => set({ isSaving: v }),
   setIsDirty: (v) => set({ isDirty: v }),
+
+  undo: () =>
+    set((state) => {
+      if (state.history.length === 0) return state;
+      const prev = state.history[state.history.length - 1];
+      return {
+        nodes: prev,
+        history: state.history.slice(0, -1),
+        future: [state.nodes, ...state.future],
+        isDirty: true,
+      };
+    }),
+
+  redo: () =>
+    set((state) => {
+      if (state.future.length === 0) return state;
+      const next = state.future[0];
+      return {
+        nodes: next,
+        history: [...state.history, state.nodes],
+        future: state.future.slice(1),
+        isDirty: true,
+      };
+    }),
 }));
