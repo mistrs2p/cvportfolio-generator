@@ -52,11 +52,12 @@ export interface ElementDef {
 export interface SlideNode {
   id: string;
   tag: HTMLTag;
-  content?: string; 
-  className: string; 
-  children?: SlideNode[]; 
-  attributes?: Record<string, string>; 
-  isEditing?: boolean; 
+  content?: string;
+  className: string;
+  styles?: Record<string, string>;  // ← inline styles
+  children?: SlideNode[];
+  attributes?: Record<string, string>;
+  isEditing?: boolean;
 }
 
 export interface SlideBackground {

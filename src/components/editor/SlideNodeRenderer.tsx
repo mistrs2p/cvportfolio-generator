@@ -265,7 +265,7 @@ export function SlideNodeRenderer({
         <Tag
           className={node.className}
           dir={node.attributes?.dir as string | undefined}
-          style={arbitraryStyles}
+          style={{ ...arbitraryStyles, ...node.styles }}
           {...node.attributes}
         >
           {node.children && node.children.length > 0 ? (
@@ -323,7 +323,7 @@ export function SlideNodeRenderer({
           node.className,
           isEditing && "outline-none cursor-text",
         )}
-        style={arbitraryStyles}
+        style={{ ...arbitraryStyles, ...node.styles }}
         contentEditable={isEditing}
         suppressContentEditableWarning
         onBlur={handleBlur}

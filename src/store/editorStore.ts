@@ -24,136 +24,148 @@ export const DEFAULT_SLIDE_SETTINGS: SlideSettings = {
   gap: 16,
 };
 
-const TAILWIND_CONFLICT_GROUPS: RegExp[] = [
-  // Font Size
-  /^text-(xs|sm|base|lg|xl|2xl|3xl|4xl|5xl|6xl|7xl|8xl|9xl)$/,
-  // Font Weight
-  /^font-(thin|extralight|light|normal|medium|semibold|bold|extrabold|black)$/,
-  // Text Align
-  /^text-(left|center|right|justify)$/,
-  // Text Color — فقط رنگ‌ها
-  /^text-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)-(50|100|200|300|400|500|600|700|800|900|950)$/,
-  /^text-(white|black|transparent|current)$/,
-  // Background Color
-  /^bg-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)-(50|100|200|300|400|500|600|700|800|900|950)$/,
-  /^bg-(white|black|transparent|current)$/,
-  // Display
-  /^(block|inline-block|inline|flex|inline-flex|grid|inline-grid|hidden)$/,
-  // Flex Direction
-  /^flex-(row|row-reverse|col|col-reverse)$/,
-  // Justify Content
-  /^justify-(start|end|center|between|around|evenly)$/,
-  // Align Items
-  /^items-(start|end|center|baseline|stretch)$/,
-  // Padding (all sides)
-  /^p-(0|px|0\.5|1|1\.5|2|2\.5|3|3\.5|4|5|6|7|8|9|10|11|12|14|16|20|24|28|32|36|40|44|48|52|56|60|64|72|80|96)$/,
-  // Padding X
-  /^px-(0|px|0\.5|1|1\.5|2|2\.5|3|3\.5|4|5|6|7|8|9|10|11|12|14|16|20|24|28|32|36|40|44|48|52|56|60|64|72|80|96)$/,
-  // Padding Y
-  /^py-(0|px|0\.5|1|1\.5|2|2\.5|3|3\.5|4|5|6|7|8|9|10|11|12|14|16|20|24|28|32|36|40|44|48|52|56|60|64|72|80|96)$/,
-  // Margin (all sides)
-  /^m-(0|px|auto|0\.5|1|1\.5|2|2\.5|3|3\.5|4|5|6|7|8|9|10|11|12|14|16|20|24|28|32|36|40|44|48|52|56|60|64|72|80|96)$/,
-  // Width
-  /^w-(0|px|auto|full|screen|min|max|fit|1\/2|1\/3|2\/3|1\/4|3\/4|1\/5|2\/5|3\/5|4\/5)$/,
-  /^w-\[.+\]$/,
-  // Height
-  /^h-(0|px|auto|full|screen|min|max|fit)$/,
-  /^h-\[.+\]$/,
-  // Border Radius
-  /^rounded(-(none|sm|md|lg|xl|2xl|3xl|full))?$/,
-  // Border Width
-  /^border(-(0|2|4|8))?$/,
-  // Border Color
-  /^border-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(50|100|200|300|400|500|600|700|800|900|950)$/,
-  // Gap
-  /^gap-(0|px|0\.5|1|1\.5|2|2\.5|3|3\.5|4|5|6|7|8|9|10|11|12|14|16|20|24|28|32)$/,
-  // Grid Cols
-  /^grid-cols-(1|2|3|4|5|6|7|8|9|10|11|12|none)$/,
-  // Object Fit
-  /^object-(contain|cover|fill|none|scale-down)$/,
-  // Line Height
-  /^leading-(none|tight|snug|normal|relaxed|loose|[3-9]|10)$/,
-  // Letter Spacing
-  /^tracking-(tighter|tight|normal|wide|wider|widest)$/,
-  // Opacity
-  /^opacity-(0|5|10|20|25|30|40|50|60|70|75|80|90|95|100)$/,
-  // Shadow
-  /^shadow(-(sm|md|lg|xl|2xl|inner|none))?$/,
-  // Position
-  /^(static|fixed|absolute|relative|sticky)$/,
-  /^p-(\[.+\]|0|px|0\.5|1|1\.5|2|...)$/,
-  /^px-(\[.+\]|0|px|...)$/,
-  /^py-(\[.+\]|0|px|...)$/,
-  /^w-(\[.+\]|0|px|auto|full|...)$/,
-  /^h-(\[.+\]|0|px|auto|full|...)$/,
-  /^text-\[.+\]$/,
-  /^bg-\[.+\]$/,
-  /^m-(\[.+\]|0|px|auto|...)$/,
-  /^gap-(\[.+\]|0|px|...)$/,
-  /^rounded(-\[.+\]|-none|-sm|-md|-lg|-xl|-2xl|-3xl|-full)?$/,
-  /^grid-cols-(\[.+\]|1|2|3|...)$/,
-];
+// ─── Conflict Groups (جایگزین TAILWIND_CONFLICT_GROUPS و CLASS_PREFIXES) ────
 
-/**
- * تشخیص می‌ده که دو کلاس با هم conflict دارن یا نه
- */
-// ✅ جایگزین کن classesConflict رو با این:
-const CLASS_PREFIXES = [
-  "p-",
-  "px-",
-  "py-",
-  "pt-",
-  "pb-",
-  "pl-",
-  "pr-",
-  "m-",
-  "mx-",
-  "my-",
-  "mt-",
-  "mb-",
-  "ml-",
-  "mr-",
-  "w-",
-  "h-",
-  "min-w-",
-  "min-h-",
-  "max-w-",
-  "max-h-",
-  "gap-",
-  "gap-x-",
-  "gap-y-",
-  "text-",
-  "bg-",
-  "border-",
-  "rounded",
-  "shadow",
-  "opacity-",
-  "grid-cols-",
-  "grid-rows-",
-  "flex-",
-  "items-",
-  "justify-",
-  "leading-",
-  "tracking-",
-  "font-",
-  "top-",
-  "right-",
-  "bottom-",
-  "left-",
-  "z-",
+const CONFLICT_GROUPS: RegExp[][] = [
+  // Font Size — فقط سایز، نه رنگ
+  [/^text-(xs|sm|base|lg|xl|2xl|3xl|4xl|5xl|6xl|7xl|8xl|9xl)$/, /^text-\[[\d.]+(?:px|rem|em)\]$/],
+  
+  // Font Weight — فقط weight، نه font-family
+  [/^font-(thin|extralight|light|normal|medium|semibold|bold|extrabold|black)$/],
+  
+  // Text Color — فقط رنگ
+  [
+    /^text-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(50|100|200|300|400|500|600|700|800|900|950)$/,
+    /^text-(white|black|transparent|current)$/,
+    /^text-\[#[0-9a-fA-F]+\]$/,
+  ],
+  
+  // Background Color
+  [
+    /^bg-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(50|100|200|300|400|500|600|700|800|900|950)$/,
+    /^bg-(white|black|transparent|current)$/,
+    /^bg-\[#[0-9a-fA-F]+\]$/,
+  ],
+  
+  // Display
+  [/^(block|inline-block|inline|flex|inline-flex|grid|inline-grid|hidden)$/],
+  
+  // Flex Direction
+  [/^flex-(row|row-reverse|col|col-reverse)$/],
+  
+  // Justify Content
+  [/^justify-(start|end|center|between|around|evenly)$/],
+  
+  // Align Items
+  [/^items-(start|end|center|baseline|stretch)$/],
+  
+  // Padding all sides
+  [/^p-(\d+(\.\d+)?|px|\[.+\])$/],
+  
+  // Padding X
+  [/^px-(\d+(\.\d+)?|px|\[.+\])$/],
+  
+  // Padding Y
+  [/^py-(\d+(\.\d+)?|px|\[.+\])$/],
+  
+  // Padding individual sides
+  [/^pt-(\d+(\.\d+)?|px|\[.+\])$/],
+  [/^pb-(\d+(\.\d+)?|px|\[.+\])$/],
+  [/^pl-(\d+(\.\d+)?|px|\[.+\])$/],
+  [/^pr-(\d+(\.\d+)?|px|\[.+\])$/],
+  
+  // Margin all sides
+  [/^m-(\d+(\.\d+)?|px|auto|\[.+\])$/],
+  
+  // Margin individual sides
+  [/^mx-(\d+(\.\d+)?|px|auto|\[.+\])$/],
+  [/^my-(\d+(\.\d+)?|px|auto|\[.+\])$/],
+  [/^mt-(\d+(\.\d+)?|px|auto|\[.+\])$/],
+  [/^mb-(\d+(\.\d+)?|px|auto|\[.+\])$/],
+  [/^ml-(\d+(\.\d+)?|px|auto|\[.+\])$/],
+  [/^mr-(\d+(\.\d+)?|px|auto|\[.+\])$/],
+  
+  // Width
+  [/^w-(auto|full|screen|min|max|fit|\d+\/\d+|\d+(\.\d+)?|px|\[.+\])$/],
+  
+  // Height
+  [/^h-(auto|full|screen|min|max|fit|\d+(\.\d+)?|px|\[.+\])$/],
+  
+  // Min/Max Width/Height
+  [/^min-w-(\S+)$/],
+  [/^max-w-(\S+)$/],
+  [/^min-h-(\S+)$/],
+  [/^max-h-(\S+)$/],
+  
+  // Border Radius
+  [/^rounded(-(none|sm|md|lg|xl|2xl|3xl|full))?$/],
+  
+  // Border Width
+  [/^border(-(0|2|4|8))?$/],
+  
+  // Border Color
+  [/^border-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(50|100|200|300|400|500|600|700|800|900|950)$/],
+  
+  // Gap
+  [/^gap-(\d+(\.\d+)?|px|\[.+\])$/],
+  [/^gap-x-(\d+(\.\d+)?|px|\[.+\])$/],
+  [/^gap-y-(\d+(\.\d+)?|px|\[.+\])$/],
+  
+  // Grid Cols
+  [/^grid-cols-(\d+|none|\[.+\])$/],
+  
+  // Object Fit
+  [/^object-(contain|cover|fill|none|scale-down)$/],
+  
+  // Line Height
+  [/^leading-(none|tight|snug|normal|relaxed|loose|\d+)$/],
+  
+  // Letter Spacing
+  [/^tracking-(tighter|tight|normal|wide|wider|widest|\[.+\])$/],
+  
+  // Opacity
+  [/^opacity-(\d+|\[.+\])$/],
+  
+  // Shadow
+  [/^shadow(-(sm|md|lg|xl|2xl|inner|none))?$/],
+  
+  // Position
+  [/^(static|fixed|absolute|relative|sticky)$/],
+  
+  // Z-index
+  [/^z-(\d+|auto|\[.+\])$/],
+  
+  // Text Transform
+  [/^(uppercase|lowercase|capitalize|normal-case)$/],
+  
+  // Text Decoration
+  [/^(underline|overline|line-through|no-underline)$/],
+  
+  // Font Style
+  [/^(italic|not-italic)$/],
+  
+  // Overflow
+  [/^overflow-(hidden|auto|visible|scroll|clip)$/],
+  [/^overflow-x-(hidden|auto|visible|scroll|clip)$/],
+  [/^overflow-y-(hidden|auto|visible|scroll|clip)$/],
+  
+  // Top/Right/Bottom/Left
+  [/^top-(\d+(\.\d+)?|px|auto|full|\[.+\])$/],
+  [/^right-(\d+(\.\d+)?|px|auto|full|\[.+\])$/],
+  [/^bottom-(\d+(\.\d+)?|px|auto|full|\[.+\])$/],
+  [/^left-(\d+(\.\d+)?|px|auto|full|\[.+\])$/],
 ];
 
 function classesConflict(classA: string, classB: string): boolean {
   if (classA === classB) return false;
-  for (const prefix of CLASS_PREFIXES) {
-    if (classA.startsWith(prefix) && classB.startsWith(prefix)) return true;
-  }
-  // fallback به regex groups برای display/position
-  for (const group of TAILWIND_CONFLICT_GROUPS) {
-    if (group.test(classA) && group.test(classB)) return true;
+  for (const group of CONFLICT_GROUPS) {
+    const aMatches = group.some((r) => r.test(classA));
+    const bMatches = group.some((r) => r.test(classB));
+    if (aMatches && bMatches) return true;
   }
   return false;
 }
+
 /**
  * یه کلاس جدید رو به className اضافه می‌کنه
  * و کلاس‌های conflicting قبلی رو حذف می‌کنه
@@ -347,6 +359,7 @@ interface EditorStore {
     targetId: string,
     position: "before" | "after" | "inside",
   ) => void;
+  updateNodeStyle: (id: string, styleKey: string, value: string) => void;
 }
 
 // ─── Store Implementation ────────────────────────────────────────────────────
@@ -577,25 +590,22 @@ export const useEditorStore = create<EditorStore>()(
        * - اگه نبود: اضافه می‌کنه
        */
       toggleTailwindClass: (nodeId, className) =>
-        set((state) => {
-          const currentSlide = state.slides[state.currentSlideIndex];
-          if (!currentSlide) return state;
-
-          return {
-            slides: state.slides.map((s, i) =>
-              i === state.currentSlideIndex
-                ? {
-                    ...s,
-                    nodes: updateNodeInTree(s.nodes, nodeId, (node) => ({
-                      ...node,
-                      className: mergeTailwindClass(node.className, className),
-                    })),
-                  }
-                : s,
-            ),
-            isDirty: true,
-          };
-        }),
+        set((state) => ({
+          ...state,
+          slides: state.slides.map((s, i) =>
+            i === state.currentSlideIndex
+              ? {
+                  ...s,
+                  nodes: updateNodeInTree(s.nodes, nodeId, (node) => ({
+                    ...node,
+                    styles: node.styles, // ← اضافه کن (preserve می‌کنه)
+                    className: mergeTailwindClass(node.className, className),
+                  })),
+                }
+              : s,
+          ),
+          isDirty: true,
+        })),
 
       setTailwindClass: (nodeId, classes) =>
         set((state) => {
@@ -753,6 +763,21 @@ export const useEditorStore = create<EditorStore>()(
             isDirty: true,
           };
         }),
+      updateNodeStyle: (id: string, styleKey: string, value: string) => {
+        set((state) => ({
+          slides: state.slides.map((slide, i) =>
+            i === state.currentSlideIndex
+              ? {
+                  ...slide,
+                  nodes: updateNodeInTree(slide.nodes, id, (node) => ({
+                    ...node,
+                    styles: { ...node.styles, [styleKey]: value },
+                  })),
+                }
+              : slide,
+          ),
+        }));
+      },
     }),
 
     {

@@ -70,7 +70,7 @@ export default function SlideCanvas() {
   const bgStyle = buildBackground(slideSettings);
 
   return (
-    <div className="flex-1 flex items-center justify-center bg-slate-950 overflow-auto p-8">
+    <div className="flex-1 flex items-center justify-center bg-slate-950 overflow-auto p-8 ">
         <div
           ref={canvasRef}
           id="slide-canvas"
@@ -82,7 +82,7 @@ export default function SlideCanvas() {
           onDrop={handleDrop}
           style={{
             width: `${slideSettings.canvasWidth}px`,
-            minHeight: `${slideSettings.canvasHeight}px`,
+            height: `${slideSettings.canvasHeight}px`,
             padding: `${slideSettings.padding}px`,
             gap: `${slideSettings.gap}px`,
             display: "flex",
@@ -90,7 +90,7 @@ export default function SlideCanvas() {
             ...bgStyle,
           }}
           className={clsx(
-            "relative shadow-2xl transition-all",
+            " shadow-2xl transition-all h-full",
             isDragOver &&
               "ring-2 ring-indigo-500 ring-offset-2 ring-offset-slate-950",
           )}

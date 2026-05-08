@@ -1,33 +1,17 @@
-/**
- * کلاس‌های Tailwind arbitrary رو به CSSProperties تبدیل می‌کنه
- * مثال: "p-[40px]" → { padding: "40px" }
- */
 const ARBITRARY_MAP: Array<{
   pattern: RegExp;
   toCss: (val: string) => React.CSSProperties;
 }> = [
   { pattern: /^p-\[(.+)\]$/, toCss: (v) => ({ padding: v }) },
-  {
-    pattern: /^px-\[(.+)\]$/,
-    toCss: (v) => ({ paddingLeft: v, paddingRight: v }),
-  },
-  {
-    pattern: /^py-\[(.+)\]$/,
-    toCss: (v) => ({ paddingTop: v, paddingBottom: v }),
-  },
+  { pattern: /^px-\[(.+)\]$/, toCss: (v) => ({ paddingLeft: v, paddingRight: v }) },
+  { pattern: /^py-\[(.+)\]$/, toCss: (v) => ({ paddingTop: v, paddingBottom: v }) },
   { pattern: /^pt-\[(.+)\]$/, toCss: (v) => ({ paddingTop: v }) },
   { pattern: /^pb-\[(.+)\]$/, toCss: (v) => ({ paddingBottom: v }) },
   { pattern: /^pl-\[(.+)\]$/, toCss: (v) => ({ paddingLeft: v }) },
   { pattern: /^pr-\[(.+)\]$/, toCss: (v) => ({ paddingRight: v }) },
   { pattern: /^m-\[(.+)\]$/, toCss: (v) => ({ margin: v }) },
-  {
-    pattern: /^mx-\[(.+)\]$/,
-    toCss: (v) => ({ marginLeft: v, marginRight: v }),
-  },
-  {
-    pattern: /^my-\[(.+)\]$/,
-    toCss: (v) => ({ marginTop: v, marginBottom: v }),
-  },
+  { pattern: /^mx-\[(.+)\]$/, toCss: (v) => ({ marginLeft: v, marginRight: v }) },
+  { pattern: /^my-\[(.+)\]$/, toCss: (v) => ({ marginTop: v, marginBottom: v }) },
   { pattern: /^mt-\[(.+)\]$/, toCss: (v) => ({ marginTop: v }) },
   { pattern: /^mb-\[(.+)\]$/, toCss: (v) => ({ marginBottom: v }) },
   { pattern: /^w-\[(.+)\]$/, toCss: (v) => ({ width: v }) },
@@ -36,12 +20,16 @@ const ARBITRARY_MAP: Array<{
   { pattern: /^min-h-\[(.+)\]$/, toCss: (v) => ({ minHeight: v }) },
   { pattern: /^max-w-\[(.+)\]$/, toCss: (v) => ({ maxWidth: v }) },
   { pattern: /^max-h-\[(.+)\]$/, toCss: (v) => ({ maxHeight: v }) },
-  { pattern: /^text-\[(.+)\]$/, toCss: (v) => ({ fontSize: v }) },
-  {
-    pattern: /^text-\[#.+\]$/,
-    toCss: (v) => ({ color: v.replace(/^text-/, "").slice(1, -1) }),
-  },
-  { pattern: /^bg-\[(.+)\]$/, toCss: (v) => ({ backgroundColor: v }) },
+
+  // ✅ رنگ متن — باید قبل از fontSize بیاد
+  { pattern: /^text-\[#([0-9a-fA-F]{3,8})\]$/, toCss: (v) => ({ color: `#${v}` }) },
+  { pattern: /^text-\[(rgb|rgba|hsl|hsla).+\]$/, toCss: (v) => ({ color: v }) },
+
+  // ✅ font size — فقط وقتی مقدار واحد CSS داره (px, rem, em, %)
+  { pattern: /^text-\[(\d+(?:\.\d+)?(?:px|rem|em|vh|vw|%|ch))\]$/, toCss: (v) => ({ fontSize: v }) },
+
+  { pattern: /^bg-\[#([0-9a-fA-F]{3,8})\]$/, toCss: (v) => ({ backgroundColor: `#${v}` }) },
+  { pattern: /^bg-\[(rgb|rgba|hsl|hsla).+\]$/, toCss: (v) => ({ backgroundColor: v }) },
   { pattern: /^border-\[(.+)\]$/, toCss: (v) => ({ borderColor: v }) },
   { pattern: /^rounded-\[(.+)\]$/, toCss: (v) => ({ borderRadius: v }) },
   { pattern: /^gap-\[(.+)\]$/, toCss: (v) => ({ gap: v }) },
@@ -51,14 +39,8 @@ const ARBITRARY_MAP: Array<{
   { pattern: /^bottom-\[(.+)\]$/, toCss: (v) => ({ bottom: v }) },
   { pattern: /^z-\[(.+)\]$/, toCss: (v) => ({ zIndex: v }) },
   { pattern: /^opacity-\[(.+)\]$/, toCss: (v) => ({ opacity: v }) },
-  {
-    pattern: /^grid-cols-\[(.+)\]$/,
-    toCss: (v) => ({ gridTemplateColumns: v.replace(/_/g, " ") }),
-  },
-  {
-    pattern: /^grid-rows-\[(.+)\]$/,
-    toCss: (v) => ({ gridTemplateRows: v.replace(/_/g, " ") }),
-  },
+  { pattern: /^grid-cols-\[(.+)\]$/, toCss: (v) => ({ gridTemplateColumns: v.replace(/_/g, " ") }) },
+  { pattern: /^grid-rows-\[(.+)\]$/, toCss: (v) => ({ gridTemplateRows: v.replace(/_/g, " ") }) },
   { pattern: /^leading-\[(.+)\]$/, toCss: (v) => ({ lineHeight: v }) },
   { pattern: /^tracking-\[(.+)\]$/, toCss: (v) => ({ letterSpacing: v }) },
 ];

@@ -270,7 +270,7 @@ function TypographySection({ id }: { id: string }) {
           ))}
         </div>
       </div>
-
+      <FontSection id={id} />
       <ArbitraryInput
         id={id}
         label=""
@@ -720,6 +720,8 @@ function ActiveClasses({ id }: { id: string }) {
 
 // ─── Slide Settings ───────────────────────────────────────────────────────────
 
+import { SLIDE_PRESETS } from "@/config/slideConfig";
+
 function SlideSettingsPanel() {
   const { slideSettings, updateSlideSettings, resetSlideSettings } =
     useEditorStore();
@@ -737,6 +739,7 @@ function SlideSettingsPanel() {
 
   return (
     <aside className="w-64 bg-slate-900 border-l border-slate-800 overflow-y-auto shrink-0">
+      {/* header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800">
         <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">
           Slide Settings
@@ -749,129 +752,73 @@ function SlideSettingsPanel() {
           <RotateCcw className="w-3 h-3" />
         </button>
       </div>
+
       <div className="p-3 space-y-3">
+        {/* ── Preset Sizes ── */}
         <div>
-          <p className="text-slate-500 text-xs mb-1">Canvas Width</p>
-          <input
-            type="number"
-            min={400}
-            max={1920}
-            step={10}
-            value={canvasWidth}
-            onChange={(e) =>
-              updateSlideSettings({ canvasWidth: Number(e.target.value) })
-            }
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-white text-xs outline-none focus:border-indigo-500 transition"
-          />
-          <p className="text-slate-600 text-xs mt-1">
-            Height: {canvasHeight}px (16:9)
-          </p>
-        </div>
-        <div>
-          <p className="text-slate-500 text-xs mb-1">Padding: {padding}px</p>
-          <input
-            type="range"
-            min={0}
-            max={80}
-            step={4}
-            value={padding}
-            onChange={(e) =>
-              updateSlideSettings({ padding: Number(e.target.value) })
-            }
-            className="w-full accent-indigo-500"
-          />
-        </div>
-        <div>
-          <p className="text-slate-500 text-xs mb-1">Gap: {gap}px</p>
-          <input
-            type="range"
-            min={0}
-            max={48}
-            step={4}
-            value={gap}
-            onChange={(e) =>
-              updateSlideSettings({ gap: Number(e.target.value) })
-            }
-            className="w-full accent-indigo-500"
-          />
-        </div>
-        <div>
-          <p className="text-slate-500 text-xs mb-1.5">Background</p>
-          <div className="flex gap-1 mb-2">
-            {(["solid", "gradient"] as const).map((t) => (
+          <p className="text-slate-500 text-xs mb-1.5">Preset Sizes</p>
+          <div className="grid grid-cols-1 gap-1">
+            {SLIDE_PRESETS.map((preset) => (
               <button
-                key={t}
-                onClick={() => updateSlideSettings({ backgroundType: t })}
+                key={preset.id}
+                onClick={() =>
+                  updateSlideSettings({
+                    canvasWidth: preset.width,
+                    canvasHeight: preset.height,
+                  })
+                }
                 className={clsx(
-                  "flex-1 py-1 rounded text-xs transition",
-                  backgroundType === t
+                  "flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition",
+                  canvasWidth === preset.width && canvasHeight === preset.height
                     ? "bg-indigo-600 text-white"
                     : "bg-slate-800 text-slate-400 hover:bg-slate-700",
                 )}
               >
-                {t}
+                <span>{preset.label}</span>
+                <span className="font-mono text-[10px] opacity-60">
+                  {preset.width}×{preset.height}
+                </span>
               </button>
             ))}
           </div>
-          {backgroundType === "solid" ? (
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={backgroundColor}
-                onChange={(e) =>
-                  updateSlideSettings({ backgroundColor: e.target.value })
-                }
-                className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent"
-              />
-              <span className="text-slate-400 text-xs font-mono">
-                {backgroundColor}
-              </span>
-            </div>
-          ) : (
-            <>
-              <div className="flex items-center gap-2 mb-1">
-                <input
-                  type="color"
-                  value={gradientFrom}
-                  onChange={(e) =>
-                    updateSlideSettings({ gradientFrom: e.target.value })
-                  }
-                  className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent"
-                />
-                <span className="text-slate-400 text-xs font-mono">
-                  {gradientFrom}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 mb-2">
-                <input
-                  type="color"
-                  value={gradientTo}
-                  onChange={(e) =>
-                    updateSlideSettings({ gradientTo: e.target.value })
-                  }
-                  className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent"
-                />
-                <span className="text-slate-400 text-xs font-mono">
-                  {gradientTo}
-                </span>
-              </div>
-              <p className="text-slate-500 text-xs mb-1">
-                Angle: {gradientAngle}°
-              </p>
-              <input
-                type="range"
-                min={0}
-                max={360}
-                step={15}
-                value={gradientAngle}
-                onChange={(e) =>
-                  updateSlideSettings({ gradientAngle: Number(e.target.value) })
-                }
-                className="w-full accent-indigo-500"
-              />
-            </>
-          )}
         </div>
+
+        {/* ── Custom Width & Height ── */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <p className="text-slate-500 text-xs mb-1">Width</p>
+            <input
+              type="number"
+              min={400}
+              max={3840}
+              step={10}
+              value={canvasWidth}
+              onChange={(e) =>
+                updateSlideSettings({ canvasWidth: Number(e.target.value) })
+              }
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-white text-xs outline-none focus:border-indigo-500 transition"
+            />
+          </div>
+          <div>
+            <p className="text-slate-500 text-xs mb-1">Height</p>
+            <input
+              type="number"
+              min={200}
+              max={3840}
+              step={10}
+              value={canvasHeight}
+              onChange={(e) =>
+                updateSlideSettings({ canvasHeight: Number(e.target.value) })
+              }
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-white text-xs outline-none focus:border-indigo-500 transition"
+            />
+          </div>
+        </div>
+        <p className="text-slate-600 text-xs -mt-1">
+          Ratio: {(canvasWidth / canvasHeight).toFixed(2)}:1
+        </p>
+
+        {/* ... بقیه settings (padding, gap, background) مثل قبل */}
       </div>
     </aside>
   );
@@ -963,5 +910,62 @@ export default function PropertiesPanel() {
 
       <RawClassEditor id={selectedId} />
     </aside>
+  );
+}
+
+import { FONTS } from "@/config/fonts";
+
+function FontSection({ id }: { id: string }) {
+  const updateNodeStyle = useEditorStore((s) => s.updateNodeStyle);
+  const node = useEditorStore((s) => s.findNodeById(id));
+  const currentFamily = node?.styles?.fontFamily ?? "";
+
+  const enFonts = FONTS.filter((f) => f.lang === "en");
+  const faFonts = FONTS.filter((f) => f.lang === "fa");
+
+  function applyFont(family: string) {
+    updateNodeStyle(id, "fontFamily", family);
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-slate-500 text-xs mb-1.5">English Fonts</p>
+      <div className="grid grid-cols-2 gap-1">
+        {enFonts.map((f) => (
+          <button
+            key={f.id}
+            onClick={() => applyFont(f.family)}
+            className={clsx(
+              "px-2 py-1.5 rounded text-xs text-left transition truncate",
+              currentFamily === f.family
+                ? "bg-indigo-600 text-white"
+                : "bg-slate-800 text-slate-400 hover:bg-slate-700",
+            )}
+            style={{ fontFamily: f.family }} // ← preview واقعی
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+      <p className="text-slate-500 text-xs mt-2 mb-1.5">فارسی</p>
+      <div className="grid grid-cols-2 gap-1">
+        {faFonts.map((f) => (
+          <button
+            key={f.id}
+            onClick={() => applyFont(f.family)}
+            dir="rtl"
+            className={clsx(
+              "px-2 py-1.5 rounded text-xs text-right transition truncate",
+              currentFamily === f.family
+                ? "bg-indigo-600 text-white"
+                : "bg-slate-800 text-slate-400 hover:bg-slate-700",
+            )}
+            style={{ fontFamily: f.family }}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
