@@ -2,366 +2,366 @@
 
 import { useState } from "react";
 import { useEditorStore } from "@/store/editorStore";
-import { ColumnContentType, NodeType, SlideNode } from "@/types/slide";
 import {
-  Type,
-  AlignLeft,
-  Heading2,
-  Image,
-  Trash2,
-  Columns2,
-} from "lucide-react";
+  ElementDef,
+  ElementDefinition,
+  ElementGroup,
+  SlideNode,
+} from "@/types/slide";
 import clsx from "clsx";
-import { nanoid } from "nanoid";
-// import IconPickerModal from "@/components/editor/IconPickerModal";
+import { Trash2, ChevronDown, ChevronUp } from "lucide-react";
 
-const nodeTypes: {
-  type: NodeType;
-  label: string;
-  icon: React.ElementType;
-  desc: string;
-}[] = [
-  { type: "title", label: "Title", icon: Type, desc: "Main slide heading" },
+// ─── تعریف گروه‌های المنت ────────────────────────────────────────────────────
+
+const ELEMENT_GROUPS: ElementGroup[] = [
   {
-    type: "section",
-    label: "Section",
-    icon: Heading2,
-    desc: "Sub-section heading",
+    label: "🔤 Headings",
+    elements: [
+      {
+        tag: "h1",
+        label: "H1 — Heading 1",
+        icon: "H1",
+        defaultContent: "Heading 1",
+        defaultClassName: "text-4xl font-bold text-white leading-tight",
+      },
+      {
+        tag: "h2",
+        label: "H2 — Heading 2",
+        icon: "H2",
+        defaultContent: "Heading 2",
+        defaultClassName: "text-3xl font-bold text-white leading-tight",
+      },
+      {
+        tag: "h3",
+        label: "H3 — Heading 3",
+        icon: "H3",
+        defaultContent: "Heading 3",
+        defaultClassName: "text-2xl font-semibold text-white",
+      },
+      {
+        tag: "h4",
+        label: "H4 — Heading 4",
+        icon: "H4",
+        defaultContent: "Heading 4",
+        defaultClassName: "text-xl font-semibold text-slate-200",
+      },
+      {
+        tag: "h5",
+        label: "H5 — Heading 5",
+        icon: "H5",
+        defaultContent: "Heading 5",
+        defaultClassName: "text-lg font-medium text-slate-300",
+      },
+      {
+        tag: "h6",
+        label: "H6 — Heading 6",
+        icon: "H6",
+        defaultContent: "Heading 6",
+        defaultClassName: "text-base font-medium text-slate-400",
+      },
+    ],
   },
   {
-    type: "paragraph",
-    label: "Paragraph",
-    icon: AlignLeft,
-    desc: "Body text block",
+    label: "📝 Text",
+    elements: [
+      {
+        tag: "p",
+        label: "Paragraph",
+        icon: "P",
+        defaultContent: "Write your text here...",
+        defaultClassName:
+          "text-base font-normal text-slate-300 leading-relaxed",
+      },
+      {
+        tag: "span",
+        label: "Span / Badge",
+        icon: "S",
+        defaultContent: "Badge",
+        defaultClassName:
+          "text-sm font-medium text-indigo-400 bg-indigo-400/10 px-3 py-1 rounded-full inline-block",
+      },
+      {
+        tag: "a",
+        label: "Link",
+        icon: "A",
+        defaultContent: "Click here",
+        defaultClassName:
+          "text-base text-indigo-400 underline hover:text-indigo-300",
+        attributes: { href: "#" },
+      },
+      {
+        tag: "blockquote",
+        label: "Blockquote",
+        icon: "❝",
+        defaultContent: "A great quote goes here.",
+        defaultClassName:
+          "text-lg italic text-slate-400 border-l-4 border-indigo-500 pl-4",
+      },
+    ],
   },
-  { type: "image", label: "Image", icon: Image, desc: "Image via URL" },
+  {
+    label: "🖼 Media",
+    elements: [
+      {
+        tag: "img",
+        label: "Image",
+        icon: "IMG",
+        defaultContent: "https://placehold.co/600x300/1e293b/94a3b8?text=Image",
+        defaultClassName: "w-full rounded-lg object-cover",
+        attributes: { alt: "Image" },
+      },
+    ],
+  },
+  {
+    label: "📐 Layout / Lists",
+    elements: [
+      {
+        tag: "div",
+        label: "Div (Flex Row)",
+        icon: "▦",
+        defaultClassName: "flex flex-row items-start gap-4 w-full",
+        defaultChildren: [
+          {
+            tag: "div",
+            className:
+              "flex-1 bg-slate-800 rounded-lg p-4 text-slate-300 text-sm",
+            content: "Column 1",
+          },
+          {
+            tag: "div",
+            className:
+              "flex-1 bg-slate-800 rounded-lg p-4 text-slate-300 text-sm",
+            content: "Column 2",
+          },
+        ],
+      },
+      {
+        tag: "div",
+        label: "Div (Grid 2-col)",
+        icon: "▤",
+        defaultClassName: "grid grid-cols-2 gap-4 w-full",
+        defaultChildren: [
+          {
+            tag: "div",
+            className: "bg-slate-800 rounded-lg p-4 text-slate-300 text-sm",
+            content: "Item 1",
+          },
+          {
+            tag: "div",
+            className: "bg-slate-800 rounded-lg p-4 text-slate-300 text-sm",
+            content: "Item 2",
+          },
+        ],
+      },
+      {
+        tag: "div",
+        label: "Div (Grid 3-col)",
+        icon: "▥",
+        defaultClassName: "grid grid-cols-3 gap-4 w-full",
+        defaultChildren: [
+          {
+            tag: "div",
+            className: "bg-slate-800 rounded-lg p-4 text-slate-300 text-sm",
+            content: "Item 1",
+          },
+          {
+            tag: "div",
+            className: "bg-slate-800 rounded-lg p-4 text-slate-300 text-sm",
+            content: "Item 2",
+          },
+          {
+            tag: "div",
+            className: "bg-slate-800 rounded-lg p-4 text-slate-300 text-sm",
+            content: "Item 3",
+          },
+        ],
+      },
+      {
+        tag: "ul",
+        label: "Unordered List",
+        icon: "•",
+        defaultClassName:
+          "list-disc list-inside text-slate-300 text-base space-y-2",
+        defaultChildren: [
+          { tag: "li", className: "text-slate-300", content: "List item 1" },
+          { tag: "li", className: "text-slate-300", content: "List item 2" },
+          { tag: "li", className: "text-slate-300", content: "List item 3" },
+        ],
+      },
+      {
+        tag: "ol",
+        label: "Ordered List",
+        icon: "1.",
+        defaultClassName:
+          "list-decimal list-inside text-slate-300 text-base space-y-2",
+        defaultChildren: [
+          { tag: "li", className: "text-slate-300", content: "Step 1" },
+          { tag: "li", className: "text-slate-300", content: "Step 2" },
+          { tag: "li", className: "text-slate-300", content: "Step 3" },
+        ],
+      },
+    ],
+  },
+  {
+    label: "🔘 Interactive",
+    elements: [
+      {
+        tag: "button",
+        label: "Button",
+        icon: "BTN",
+        defaultContent: "Click me",
+        defaultClassName:
+          "bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-6 py-2.5 rounded-lg transition inline-block",
+      },
+    ],
+  },
 ];
 
-export default function EditorSidebar() {
-  const {
-    nodes,
-    addNode,
-    selectNode,
-    selectedId,
-    deleteNode,
-    updateNode,
-    addNodeToColumn,
-    updateColumnNode,
-    deleteColumnNode,
-  } = useEditorStore();
+// ─── یه گروه ─────────────────────────────────────────────────────────────────
 
-  // کدوم ستون داره icon picker رو نشون میده
-  const [pickerTarget, setPickerTarget] = useState<{
-    nodeId: string;
-    colId: string;
-  } | null>(null);
-
-  function addColumnsNode(count: number) {
-    const id = nanoid();
-    addNode("columns", {
-      id,
-      type: "columns",
-      style: {},
-      columns: Array.from({ length: count }, () => ({
-        id: nanoid(),
-        nodes: [],
-      })),
-    });
-  }
-
-  function handleIconSelected(icon: string, label: string) {
-    if (!pickerTarget) return;
-    const { nodeId, colId } = pickerTarget;
-    addNodeToColumn(nodeId, colId, "paragraph");
-    const node = nodes.find((n) => n.id === nodeId);
-    if (!node?.columns) return;
-    const col = node.columns.find((c) => c.id === colId);
-    if (!col) return;
-    const lastNode = col.nodes[col.nodes.length - 1];
-    if (lastNode) {
-      updateColumnNode(nodeId, colId, lastNode.id, { content: label });
-    }
-    setPickerTarget(null);
-  }
-  const selectedNode = nodes.find((n) => n.id === selectedId);
-  const [colCount, setColCount] = useState(2);
+function ElementGroupPanel({ group }: { group: ElementGroup }) {
+  const [open, setOpen] = useState(true);
+  const { addNode } = useEditorStore();
 
   return (
-    <>
-      <aside className="w-56 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 overflow-y-auto">
-        {/* Add Elements */}
-        <div className="p-3 border-b border-slate-800">
-          <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-2 px-1">
-            Add Element
-          </p>
-          <div className="space-y-1">
-            {nodeTypes.map(({ type, label, icon: Icon, desc }) => (
-              <button
-                key={type}
-                onClick={() => addNode(type)}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-800 text-slate-300 hover:text-white transition group text-left"
-              >
-                <div className="w-7 h-7 rounded-lg bg-slate-800 group-hover:bg-indigo-500/20 flex items-center justify-center shrink-0 transition">
-                  <Icon className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-400 transition" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium">{label}</p>
-                  <p className="text-slate-600 text-xs">{desc}</p>
-                </div>
-              </button>
-            ))}
-
-            {/* ─── Columns ─── */}
-            {/* <div className="pt-1 border-t border-slate-800 mt-1">
-              <p className="text-slate-600 text-xs px-1 mb-1">Layouts</p>
-              <button
-                onClick={() => addColumnsNode(2)}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-800 text-slate-300 hover:text-white transition group text-left"
-              >
-                <div className="w-7 h-7 rounded-lg bg-slate-800 group-hover:bg-violet-500/20 flex items-center justify-center shrink-0 transition">
-                  <Columns2 className="w-3.5 h-3.5 text-slate-400 group-hover:text-violet-400 transition" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium">2 Columns</p>
-                  <p className="text-slate-600 text-xs">Side by side layout</p>
-                </div>
-              </button>
-              <button
-                onClick={() => addColumnsNode(3)}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-800 text-slate-300 hover:text-white transition group text-left"
-              >
-                <div className="w-7 h-7 rounded-lg bg-slate-800 group-hover:bg-violet-500/20 flex items-center justify-center shrink-0 transition">
-                  <Columns2 className="w-3.5 h-3.5 text-slate-400 group-hover:text-violet-400 transition" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium">3 Columns</p>
-                  <p className="text-slate-600 text-xs">Three column layout</p>
-                </div>
-              </button>
-            </div> */}
-
-            <div className="bg-slate-800 rounded-xl p-3">
-              <p className="text-slate-400 text-xs mb-2">Number of columns</p>
-
-              {/* Stepper */}
-              <div className="flex items-center gap-2 mb-2">
-                <button
-                  onClick={() => setColCount((p) => Math.max(1, p - 1))}
-                  className="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center transition"
-                >
-                  −
-                </button>
-                <span className="text-white text-sm font-medium w-6 text-center">
-                  {colCount}
-                </span>
-                <button
-                  onClick={() => setColCount((p) => Math.min(6, p + 1))}
-                  className="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center transition"
-                >
-                  +
-                </button>
-              </div>
-
-              {/* دکمه Add */}
-              <button
-                onClick={() => addColumnsNode(colCount)}
-                className="w-full bg-violet-600 hover:bg-violet-500 text-white text-xs font-medium py-2 rounded-lg transition flex items-center justify-center gap-2"
-              >
-                <Columns2 className="w-3.5 h-3.5" />
-                Add {colCount} Column{colCount > 1 ? "s" : ""}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {selectedNode?.type === "columns" && (
-          <div className="p-3 border-b border-slate-800">
-            <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-2 px-1">
-              Columns
-            </p>
-            <div className="space-y-3">
-              {selectedNode.columns?.map((col, colIndex) => (
-                <div key={col.id} className="bg-slate-800 rounded-xl p-2.5">
-                  {/* عنوان ستون */}
-                  <p className="text-slate-500 text-xs mb-2">
-                    Column {colIndex + 1}
-                  </p>
-
-                  {/* لیست نودها با قابلیت edit و delete */}
-                  <div className="space-y-1.5 mb-2">
-                    {col.nodes.length === 0 && (
-                      <p className="text-slate-600 text-xs italic px-1">
-                        Empty
-                      </p>
-                    )}
-                    {col.nodes.map((cn) => (
-                      <div
-                        key={cn.id}
-                        className="bg-slate-700 rounded-lg p-2 space-y-1"
-                      >
-                        {/* نوع نود + دکمه حذف */}
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-500 text-[10px] uppercase tracking-wider">
-                            {cn.type}
-                          </span>
-                          <button
-                            onClick={() =>
-                              deleteColumnNode(selectedNode.id, col.id, cn.id)
-                            }
-                            className="text-slate-600 hover:text-red-400 transition"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-
-                        {/* input برای متن */}
-                        {cn.type !== "image" && (
-                          <input
-                            type="text"
-                            value={cn.content ?? ""}
-                            onChange={(e) =>
-                              updateColumnNode(selectedNode.id, col.id, cn.id, {
-                                content: e.target.value,
-                              })
-                            }
-                            className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1 text-white text-xs outline-none focus:border-indigo-500 transition"
-                            placeholder="Type here..."
-                          />
-                        )}
-
-                        {/* input برای image URL */}
-                        {cn.type === "image" && (
-                          <input
-                            type="text"
-                            value={cn.content ?? ""}
-                            onChange={(e) =>
-                              updateColumnNode(selectedNode.id, col.id, cn.id, {
-                                content: e.target.value,
-                              })
-                            }
-                            className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1 text-white text-xs outline-none focus:border-indigo-500 transition"
-                            placeholder="https://image-url..."
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* دکمه افزودن المان */}
-                  <AddToColumnDropdown
-                    onAdd={(type) =>
-                      addNodeToColumn(selectedNode.id, col.id, type)
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Layers */}
-        <div className="p-3 flex-1">
-          <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-2 px-1">
-            Layers ({nodes.length})
-          </p>
-          {nodes.length === 0 && (
-            <p className="text-slate-600 text-xs text-center py-6">
-              No elements yet
-            </p>
-          )}
-          <div className="space-y-1">
-            {nodes.map((node, index) => (
-              <div
-                key={node.id}
-                onClick={() => selectNode(node.id)}
-                className={clsx(
-                  "flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition group",
-                  selectedId === node.id
-                    ? "bg-indigo-600/20 border border-indigo-500/30"
-                    : "hover:bg-slate-800 border border-transparent",
-                )}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-slate-600 text-xs font-mono shrink-0">
-                    {index + 1}
-                  </span>
-                  <span
-                    className={clsx(
-                      "text-xs font-medium truncate",
-                      selectedId === node.id
-                        ? "text-indigo-300"
-                        : "text-slate-300",
-                    )}
-                  >
-                    {node.type === "image"
-                      ? "Image"
-                      : node.type === "columns"
-                        ? `Columns (${node.columns?.length ?? 0})`
-                        : node.content?.slice(0, 20) || node.type}
-                  </span>
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteNode(node.id);
-                  }}
-                  className="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-400 transition p-0.5 rounded shrink-0"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </aside>
-
-      {/* Icon Picker Modal */}
-      {/* {pickerTarget && (
-        <IconPickerModal
-          onSelect={handleIconSelected}
-          onClose={() => setPickerTarget(null)}
-        />
-      )} */}
-    </>
-  );
-}
-
-function AddToColumnDropdown({
-  onAdd,
-}: {
-  onAdd: (type: ColumnContentType) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const options: { type: ColumnContentType; label: string }[] = [
-    { type: "title", label: "Title" },
-    { type: "paragraph", label: "Paragraph" },
-    { type: "section", label: "Section" },
-    { type: "image", label: "Image" },
-  ];
-  return (
-    <div className="relative">
+    <div className="border-b border-slate-800 last:border-0">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full text-xs text-indigo-400 hover:text-indigo-300 border border-dashed border-indigo-500/30 hover:border-indigo-400/50 rounded-lg py-1.5 transition"
+        className="w-full flex items-center justify-between px-3 py-2 text-slate-500 hover:text-slate-300 transition text-xs font-medium uppercase tracking-wider"
       >
-        + Add Element
+        <span>{group.label}</span>
+        {open ? (
+          <ChevronUp className="w-3 h-3" />
+        ) : (
+          <ChevronDown className="w-3 h-3" />
+        )}
       </button>
+
       {open && (
-        <div className="absolute bottom-full mb-1 left-0 right-0 bg-slate-900 border border-slate-700 rounded-xl shadow-xl z-10 overflow-hidden">
-          {options.map((o) => (
+        <div className="pb-2 px-2 space-y-0.5">
+          {group.elements.map((item) => (
             <button
-              key={o.type}
+              key={item.tag + item.label}
               onClick={() => {
-                onAdd(o.type);
-                setOpen(false);
+                console.log("Clicking element:", item); // برای debug
+                addNode(item as unknown as ElementDefinition);
               }}
-              className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition"
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData("element", JSON.stringify(item));
+                e.dataTransfer.effectAllowed = "copy"; // ✅ اضافه کن
+              }}
+              className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition group text-left"
             >
-              {o.label}
+              <span className="w-8 h-8 rounded-md bg-slate-800 group-hover:bg-indigo-500/20 flex items-center justify-center text-xs font-mono font-bold text-slate-400 group-hover:text-indigo-400 transition shrink-0">
+                {item.icon}
+              </span>
+              <span className="text-xs leading-tight">{item.label}</span>
             </button>
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Layers Panel ─────────────────────────────────────────────────────────────
+
+function LayersPanel() {
+  const { slides, currentSlideIndex, selectedNodeId, selectNode, removeNode } =
+    useEditorStore();
+
+  // اینم درسته
+  // const nodes = slides[currentSlideIndex]?.nodes ?? [];
+  const nodes = useEditorStore(
+    (s) => s.slides[s.currentSlideIndex]?.nodes ?? [],
+  );
+  return (
+    <div className="p-3">
+      <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-2 px-1">
+        Layers ({nodes.length})
+      </p>
+      {nodes.length === 0 && (
+        <p className="text-slate-600 text-xs text-center py-4">
+          هنوز المنتی نداری
+        </p>
+      )}
+      <div className="space-y-0.5">
+        {nodes.map((node, i) => (
+          <div
+            key={node.id}
+            onClick={() => selectNode(node.id)}
+            className={clsx(
+              "flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer group transition",
+              selectedNodeId === node.id // ✅ عوض شد
+                ? "bg-indigo-600/20 border border-indigo-500/30 text-indigo-300"
+                : "hover:bg-slate-800 text-slate-400",
+            )}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-slate-600 text-xs font-mono shrink-0">
+                {i + 1}
+              </span>
+              <span className="text-xs font-mono font-bold shrink-0 text-slate-500">
+                &lt;{node.tag}&gt;
+              </span>
+              <span className="text-xs truncate">
+                {node.content?.slice(0, 18) ??
+                  (node.children?.length
+                    ? `${node.children.length} children`
+                    : "")}
+              </span>
+            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                removeNode(node.id); // ✅ عوض شد
+              }}
+              className="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-400 transition p-0.5 shrink-0"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Sidebar ─────────────────────────────────────────────────────────────
+
+export default function EditorSidebar() {
+  const [tab, setTab] = useState<"elements" | "layers">("elements");
+
+  return (
+    <aside className="w-56 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 overflow-hidden">
+      {/* Tab Bar */}
+      <div className="flex border-b border-slate-800 shrink-0">
+        {(["elements", "layers"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={clsx(
+              "flex-1 py-2 text-xs font-medium capitalize transition",
+              tab === t
+                ? "text-white border-b-2 border-indigo-500"
+                : "text-slate-500 hover:text-slate-300",
+            )}
+          >
+            {t === "elements" ? "Elements" : "Layers"}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        {tab === "elements" ? (
+          ELEMENT_GROUPS.map((g) => (
+            <ElementGroupPanel key={g.label} group={g} />
+          ))
+        ) : (
+          <LayersPanel />
+        )}
+      </div>
+    </aside>
   );
 }

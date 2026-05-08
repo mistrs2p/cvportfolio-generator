@@ -10,6 +10,8 @@ export default async function EditorLayout({
   if (!session) redirect("/login");
 
   return (
-    <div className="h-screen overflow-hidden bg-slate-950">{children}</div>
+    <div className="h-screen overflow-hidden bg-slate-950">
+      {children}
+    </div>
   );
 }

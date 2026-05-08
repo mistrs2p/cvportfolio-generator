@@ -9,10 +9,18 @@ interface Props {
   projectId: string;
   slideId: string;
   onSave: () => void;
+  isSaving: boolean;
+  isDirty: boolean;
 }
 
-export default function EditorHeader({ projectId, slideId, onSave }: Props) {
-  const { isSaving, isDirty } = useEditorStore();
+export default function EditorHeader({
+  projectId,
+  slideId,
+  onSave,
+  isSaving,
+  isDirty,
+}: Props) {
+  // const { isSaving, isDirty } = useEditorStore();
 
   const [title, setTitle] = useState("Untitled Slide");
   const [editing, setEditing] = useState(false);

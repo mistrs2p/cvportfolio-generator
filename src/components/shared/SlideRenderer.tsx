@@ -1,173 +1,232 @@
+// src/components/shared/SlideRenderer.tsx
 "use client";
-import { SlideNode, ColumnContentNode } from "@/types/slide";
-import { SLIDE_CONFIG } from "@/config/slideConfig";
 
-// Font size map
-const FONTSIZEMAP: Record<number, string> = {
-  12: "text-xs",
-  14: "text-sm",
-  16: "text-base",
-  18: "text-lg",
-  20: "text-lg",
-  22: "text-xl",
-  24: "text-2xl",
-  28: "text-2xl",
-  30: "text-3xl",
-  32: "text-3xl",
-  36: "text-4xl",
-  40: "text-5xl",
-  48: "text-6xl",
-};
+import { SlideNode, SlideSettings } from "@/types/slide";
+import { JSX } from "react";
 
-function closestFontSize(fontSize: number): number {
-  return Object.keys(FONTSIZEMAP)
-    .map(Number)
-    .reduce((a, b) =>
-      Math.abs(b - fontSize) < Math.abs(a - fontSize) ? b : a,
-    );
+// ─────────────────────────────────────────────
+// رندر هر node به صورت بازگشتی
+// ─────────────────────────────────────────────
+
+interface NodeRendererProps {
+  node: SlideNode;
+  // فقط در editor استفاده می‌شه
+  selectedId?: string | null;
+  onSelect?: (id: string | null) => void;
+  onContentChange?: (id: string, content: string) => void;
+  isEditing?: boolean;
 }
 
-// همین export ها که قبلاً بودن (برای SlideCanvas که import می‌کنه)
-export const SLIDEPADDING = SLIDE_CONFIG.padding;
-export const SLIDEGAP = SLIDE_CONFIG.gap;
+export function SlideNodeRenderer({
+  node,
+  selectedId,
+  onSelect,
+  onContentChange,
+  isEditing = false,
+}: NodeRendererProps) {
+  const isSelected = selectedId === node.id;
+  const Tag = node.tag as keyof JSX.IntrinsicElements;
 
-// Column content node
-function ColumnNode({ cn }: { cn: ColumnContentNode }) {
-  if (cn.type === "image") {
-    return cn.content ? (
-      <img
-        src={cn.content}
-        alt=""
-        className="w-full rounded-lg object-cover"
-        style={{ maxHeight: 160 }}
-      />
-    ) : (
-      <div className="h-14 bg-slate-800/50 rounded-lg flex items-center justify-center border border-dashed border-slate-700">
-        <p className="text-slate-500 text-xs">No image</p>
-      </div>
-    );
-  }
-  return (
-    <p
-      style={{
-        color: cn.style?.color ?? "#ffffff",
-        fontSize: cn.style?.fontSize ? `${cn.style.fontSize}px` : "14px",
-        fontWeight:
-          cn.style?.fontWeight === "bold"
-            ? 700
-            : cn.style?.fontWeight === "semibold"
-              ? 600
-              : cn.style?.fontWeight === "medium"
-                ? 500
-                : 400,
-        fontStyle: cn.style?.italic ? "italic" : "normal",
-        margin: 0,
-        lineHeight: 1.4,
-      }}
-    >
-      {cn.content}
-    </p>
-  );
-}
+  // ── wrapper کلاس برای حالت editor ──
+  const editorWrapperClass = isEditing
+    ? [
+        "relative group/node outline outline-2 outline-offset-1 rounded-sm transition-all cursor-pointer",
+        isSelected
+          ? "outline-indigo-500"
+          : "outline-transparent hover:outline-slate-600",
+      ].join(" ")
+    : "";
 
-// Single node renderer
-export function SlideNodeRenderer({ node }: { node: SlideNode }) {
-  if (node.type === "image") {
-    return node.content ? (
-      <div className="shrink-0" style={{ maxHeight: 200 }}>
-        <img
-          src={node.content}
-          alt=""
-          className="rounded-xl object-cover w-full"
-          style={{ maxHeight: 200, maxWidth: "100%" }}
-        />
-      </div>
-    ) : null;
-  }
-  if (node.type === "columns") {
+  // ── img self-closing ──
+  if (node.tag === "img") {
     return (
       <div
-        className="grid gap-6 w-full shrink-0"
-        style={{
-          gridTemplateColumns: `repeat(${node.columns?.length ?? 2}, 1fr)`,
+        className={editorWrapperClass}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect?.(node.id);
         }}
       >
-        {node.columns?.map((col) => (
-          <div key={col.id} className="flex flex-col gap-2">
-            {!col.nodes || col.nodes.length === 0 ? (
-              <p className="text-slate-600 text-xs italic">Empty column</p>
-            ) : (
-              col.nodes.map((cn) => <ColumnNode key={cn.id} cn={cn} />)
-            )}
+        {node.content ? (
+          <img
+            src={node.content}
+            alt={node.attributes?.alt ?? "image"}
+            className={node.className}
+          />
+        ) : (
+          // placeholder وقتی src نداره
+          <div
+            className={`${node.className} flex items-center justify-center bg-slate-800 border-2 border-dashed border-slate-600 rounded-lg min-h-[120px]`}
+          >
+            <span className="text-slate-500 text-sm">
+              🖼 Click properties to set image URL
+            </span>
           </div>
-        ))}
+        )}
       </div>
     );
   }
-  const fontSize = node.style?.fontSize ?? 16;
-  const closest = closestFontSize(fontSize);
+
+  // ── hr self-closing ──
+  if (node.tag === "hr") {
+    return (
+      <div
+        className={editorWrapperClass}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect?.(node.id);
+        }}
+      >
+        <hr className={node.className} />
+      </div>
+    );
+  }
+
+  // ── container با children (div، ul، ol) ──
+  if (node.children !== undefined) {
+    return (
+      <div
+        className={editorWrapperClass}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect?.(node.id);
+        }}
+      >
+        <Tag className={node.className}>
+          {node.children.length === 0 && isEditing ? (
+            // placeholder برای container خالی
+            <div className="flex items-center justify-center min-h-[60px] border-2 border-dashed border-slate-700 rounded-lg">
+              <span className="text-slate-600 text-xs">
+                Empty {node.tag} — add children from properties
+              </span>
+            </div>
+          ) : (
+            node.children.map((child) => (
+              <SlideNodeRenderer
+                key={child.id}
+                node={child}
+                selectedId={selectedId}
+                onSelect={onSelect}
+                onContentChange={onContentChange}
+                isEditing={isEditing}
+              />
+            ))
+          )}
+        </Tag>
+      </div>
+    );
+  }
+
+  // ── همه المنت‌های متنی ──
+  // contentEditable برای ویرایش مستقیم روی canvas
   return (
-    <p
-      className={[
-        "shrink-0 leading-snug",
-        FONTSIZEMAP[closest],
-        `text-${node.style?.textAlign ?? "left"}`,
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      style={{
-        color: node.style?.color ?? "#ffffff",
-        fontWeight:
-          node.style?.fontWeight === "bold"
-            ? 700
-            : node.style?.fontWeight === "semibold"
-              ? 600
-              : node.style?.fontWeight === "medium"
-                ? 500
-                : 400,
-        fontStyle: node.style?.italic ? "italic" : "normal",
-      }}
+    <div
+      className={editorWrapperClass}
+      onClick={
+        isEditing
+          ? (e) => {
+              e.stopPropagation();
+              onSelect?.(node.id);
+            }
+          : undefined
+      }
     >
-      {node.content}
-    </p>
+      <Tag
+        className={node.className}
+        // فقط در editor قابل ویرایش مستقیم
+        contentEditable={isEditing ? true : undefined}
+        suppressContentEditableWarning
+        onBlur={
+          isEditing
+            ? (e) =>
+                onContentChange?.(node.id, e.currentTarget.textContent ?? "")
+            : undefined
+        }
+        // جلوگیری از رفتن به خط جدید با Enter
+        onKeyDown={
+          isEditing
+            ? (e) => {
+                if (e.key === "Enter" && !e.shiftKey) e.preventDefault();
+              }
+            : undefined
+        }
+        // attribute‌های اختیاری
+        {...(node.tag === "a" && node.attributes?.href
+          ? { href: node.attributes.href }
+          : {})}
+        {...(node.attributes?.target ? { target: node.attributes.target } : {})}
+      >
+        {node.content}
+      </Tag>
+    </div>
   );
 }
 
-// ─── SlideView ───────────────────────────────────────────────
-type SlideSettings = typeof SLIDE_CONFIG;
+// ─────────────────────────────────────────────
+// رندر کامل یه اسلاید
+// ─────────────────────────────────────────────
 
 interface SlideViewProps {
   nodes: SlideNode[];
-  className?: string;
-  settings?: Partial<SlideSettings>; // ← اضافه شد
+  settings?: Partial<SlideSettings>;
+  // editor props — اگه نبود، حالت preview
+  selectedId?: string | null;
+  onSelect?: (id: string | null) => void;
+  onContentChange?: (id: string, content: string) => void;
+  isEditing?: boolean;
 }
 
-export function SlideView({ nodes, className, settings }: SlideViewProps) {
-  // مقادیر را از settings بگیر، در غیر این صورت از SLIDE_CONFIG
-  const padding = settings?.padding ?? SLIDE_CONFIG.padding;
-  const gap = settings?.gap ?? SLIDE_CONFIG.gap;
+export function SlideView({
+  nodes,
+  settings,
+  selectedId,
+  onSelect,
+  onContentChange,
+  isEditing = false,
+}: SlideViewProps) {
+  const padding = settings?.padding ?? 32;
+  const gap = settings?.gap ?? 16;
 
-  if (!nodes?.length) {
-    return (
-      <div className="absolute inset-0 flex items-center justify-center">
-        <p className="text-slate-600 text-sm">Empty slide</p>
-      </div>
-    );
-  }
+  // ساخت background style
+  const background =
+    settings?.backgroundType === "gradient"
+      ? `linear-gradient(${settings.gradientAngle ?? 135}deg, ${settings.gradientFrom}, ${settings.gradientTo})`
+      : (settings?.backgroundColor ?? "#0f172a");
+
   return (
     <div
-      className={className ?? "absolute inset-0 overflow-hidden"}
-      style={{
-        padding,
-        display: "flex",
-        flexDirection: "column",
-        gap,
-        overflow: "hidden",
-      }}
+      className="w-full h-full relative overflow-hidden"
+      style={{ background }}
+      onClick={isEditing ? () => onSelect?.(null) : undefined}
     >
-      {nodes.map((node) => (
-        <SlideNodeRenderer key={node.id} node={node} />
-      ))}
+      {/* محتوا */}
+      <div
+        className="relative w-full h-full flex flex-col"
+        style={{ padding, gap }}
+      >
+        {nodes.map((node) => (
+          <SlideNodeRenderer
+            key={node.id}
+            node={node}
+            selectedId={selectedId}
+            onSelect={onSelect}
+            onContentChange={onContentChange}
+            isEditing={isEditing}
+          />
+        ))}
+
+        {/* وقتی canvas خالیه */}
+        {nodes.length === 0 && isEditing && (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-slate-600 text-sm mb-1">Canvas is empty</p>
+              <p className="text-slate-700 text-xs">
+                ← Pick an element from the sidebar
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

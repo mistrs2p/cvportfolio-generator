@@ -1,421 +1,724 @@
 "use client";
 
+import { useState } from "react";
 import { useEditorStore } from "@/store/editorStore";
-import { SlideNode } from "@/types/slide";
-import { AlignLeft, AlignCenter, AlignRight, Bold, Italic } from "lucide-react";
 import clsx from "clsx";
+import { RotateCcw } from "lucide-react";
 
-const fontSizes = [12, 14, 16, 18, 22, 28, 32, 36, 40];
-const fontWeights = [
-  "normal",
-  "medium",
-  "semibold",
-  "bold",
-] as SlideNode["style"]["fontWeight"][];
-const colors = [
-  "#ffffff",
-  "#94a3b8",
-  "#818cf8",
-  "#34d399",
-  "#f472b6",
-  "#fb923c",
-  "#facc15",
-  "#f87171",
+// ─── helper: toggle class ────────────────────────────────────────────────────
+
+function useNodeActions(id: string) {
+  const toggleTailwindClass = useEditorStore((s) => s.toggleTailwindClass);
+  const node = useEditorStore((s) => s.findNodeById(id));
+
+  function toggle(cls: string) {
+    toggleTailwindClass(id, cls);
+  }
+  function has(cls: string): boolean {
+    return !!node?.className?.split(" ").includes(cls);
+  }
+  return { toggle, has, className: node?.className ?? "", node };
+}
+
+// ─── Group Component ─────────────────────────────────────────────────────────
+
+function Group({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="border-b border-slate-800 last:border-0">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-3 py-2 text-slate-500 hover:text-slate-300 transition text-xs font-medium uppercase tracking-wider"
+      >
+        {label}
+        <span>{open ? "▴" : "▾"}</span>
+      </button>
+      {open && <div className="px-3 pb-3 space-y-3">{children}</div>}
+    </div>
+  );
+}
+
+// ─── Row of toggle buttons ───────────────────────────────────────────────────
+
+function ToggleRow({
+  label,
+  options,
+  active,
+  onSelect,
+}: {
+  label: string;
+  options: { label: string; value: string }[];
+  active: string;
+  onSelect: (v: string) => void;
+}) {
+  return (
+    <div>
+      <p className="text-slate-500 text-xs mb-1.5">{label}</p>
+      <div className="flex flex-wrap gap-1">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            onClick={() => onSelect(o.value)}
+            className={clsx(
+              "px-2 py-1 rounded text-xs transition font-mono",
+              active === o.value
+                ? "bg-indigo-600 text-white"
+                : "bg-slate-800 text-slate-400 hover:bg-slate-700",
+            )}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Color Picker ────────────────────────────────────────────────────────────
+
+const PRESET_COLORS = [
+  { label: "white", tw: "text-white" },
+  { label: "slate-300", tw: "text-slate-300" },
+  { label: "slate-400", tw: "text-slate-400" },
+  { label: "indigo-400", tw: "text-indigo-400" },
+  { label: "teal-400", tw: "text-teal-400" },
+  { label: "green-400", tw: "text-green-400" },
+  { label: "amber-400", tw: "text-amber-400" },
+  { label: "red-400", tw: "text-red-400" },
+  { label: "pink-400", tw: "text-pink-400" },
 ];
 
-export default function PropertiesPanel() {
-  const {
-    nodes,
-    selectedId,
-    selectedColumnItem,
-    updateNode,
-    updateColumnNode,
-  } = useEditorStore();
+const PRESET_BG = [
+  { label: "transparent", tw: "bg-transparent" },
+  { label: "slate-800", tw: "bg-slate-800" },
+  { label: "slate-700", tw: "bg-slate-700" },
+  { label: "indigo-500/20", tw: "bg-indigo-500/20" },
+  { label: "teal-500/20", tw: "bg-teal-500/20" },
+  { label: "green-500/20", tw: "bg-green-500/20" },
+  { label: "amber-500/20", tw: "bg-amber-500/20" },
+  { label: "red-500/20", tw: "bg-red-500/20" },
+];
 
-  // ─── حالت ۱: المان داخل ستون انتخاب شده ────────────────────────────────────
-  if (selectedColumnItem) {
-    const { nodeId, colId, cnId } = selectedColumnItem;
-    const parentNode = nodes.find((n) => n.id === nodeId);
-    const col = parentNode?.columns?.find((c) => c.id === colId);
-    const cn = col?.nodes.find((c) => c.id === cnId);
+function ArbitraryInput({
+  id,
+  label,
+  placeholder,
+}: {
+  id: string;
+  label: string;
+  placeholder: string;
+}) {
+  const { toggle } = useNodeActions(id);
+  const [value, setValue] = useState("");
 
-    if (!cn) return <EmptyPanel />;
-
-    const updateCn = (changes: Parameters<typeof updateColumnNode>[3]) =>
-      updateColumnNode(nodeId, colId, cnId, changes);
-
-    return (
-      <aside className="w-56 bg-slate-900 border-l border-slate-800 overflow-y-auto shrink-0">
-        <div className="p-4 space-y-5">
-          {/* برچسب نوع */}
-          <div>
-            <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">
-              Column Element
-            </p>
-            <span className="text-indigo-400 text-xs font-medium bg-indigo-500/10 px-2 py-0.5 rounded-full">
-              {cn.type}
-            </span>
-          </div>
-
-          {/* Image URL */}
-          {cn.type === "image" && (
-            <div>
-              <label className="block text-slate-400 text-xs mb-1.5">
-                Image URL
-              </label>
-              <input
-                type="text"
-                value={cn.content ?? ""}
-                onChange={(e) => updateCn({ content: e.target.value })}
-                placeholder="https://..."
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs placeholder-text-slate-600 focus:outline-none focus:border-indigo-500 transition"
-              />
-            </div>
-          )}
-
-          {/* Font Size */}
-          {cn.type !== "image" && (
-            <>
-              <div>
-                <label className="block text-slate-400 text-xs mb-1.5">
-                  Font Size
-                </label>
-                <div className="grid grid-cols-3 gap-1">
-                  {fontSizes.map((size) => (
-                    <button
-                      key={size}
-                      onClick={() =>
-                        updateCn({ style: { ...cn.style, fontSize: size } })
-                      }
-                      className={clsx(
-                        "py-1.5 rounded-lg text-xs transition",
-                        cn.style?.fontSize === size
-                          ? "bg-indigo-600 text-white"
-                          : "bg-slate-800 text-slate-400 hover:bg-slate-700",
-                      )}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Font Weight */}
-              <div>
-                <label className="block text-slate-400 text-xs mb-1.5">
-                  Weight
-                </label>
-                <div className="grid grid-cols-2 gap-1">
-                  {fontWeights.map((w) => (
-                    <button
-                      key={w}
-                      onClick={() =>
-                        updateCn({ style: { ...cn.style, fontWeight: w } })
-                      }
-                      className={clsx(
-                        "py-1.5 rounded-lg text-xs capitalize transition",
-                        cn.style?.fontWeight === w
-                          ? "bg-indigo-600 text-white"
-                          : "bg-slate-800 text-slate-400 hover:bg-slate-700",
-                      )}
-                    >
-                      {w}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Text Align */}
-              <div>
-                <label className="block text-slate-400 text-xs mb-1.5">
-                  Alignment
-                </label>
-                <div className="flex gap-1">
-                  {(["left", "center", "right"] as const).map((align) => {
-                    const Icon =
-                      align === "left"
-                        ? AlignLeft
-                        : align === "center"
-                          ? AlignCenter
-                          : AlignRight;
-                    return (
-                      <button
-                        key={align}
-                        onClick={() =>
-                          updateCn({ style: { ...cn.style, textAlign: align } })
-                        }
-                        className={clsx(
-                          "flex-1 flex items-center justify-center py-2 rounded-lg transition",
-                          cn.style?.textAlign === align
-                            ? "bg-indigo-600 text-white"
-                            : "bg-slate-800 text-slate-400 hover:bg-slate-700",
-                        )}
-                      >
-                        <Icon className="w-3.5 h-3.5" />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Italic */}
-              <div>
-                <label className="block text-slate-400 text-xs mb-1.5">
-                  Style
-                </label>
-                <button
-                  onClick={() =>
-                    updateCn({
-                      style: { ...cn.style, italic: !cn.style?.italic },
-                    })
-                  }
-                  className={clsx(
-                    "flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition w-full",
-                    cn.style?.italic
-                      ? "bg-indigo-600 text-white"
-                      : "bg-slate-800 text-slate-400 hover:bg-slate-700",
-                  )}
-                >
-                  <Italic className="w-3.5 h-3.5" />
-                  Italic
-                </button>
-              </div>
-
-              {/* Color */}
-              <div>
-                <label className="block text-slate-400 text-xs mb-1.5">
-                  Color
-                </label>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {colors.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() =>
-                        updateCn({ style: { ...cn.style, color } })
-                      }
-                      className={clsx(
-                        "w-full aspect-square rounded-lg border-2 transition",
-                        cn.style?.color === color
-                          ? "border-indigo-400 scale-110"
-                          : "border-transparent hover:border-slate-500",
-                      )}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-                {/* Custom color */}
-                <div className="flex items-center gap-2 mt-2">
-                  <input
-                    type="color"
-                    value={cn.style?.color ?? "#ffffff"}
-                    onChange={(e) =>
-                      updateCn({
-                        style: { ...cn.style, color: e.target.value },
-                      })
-                    }
-                    className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent"
-                  />
-                  <span className="text-slate-500 text-xs">Custom color</span>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      </aside>
-    );
+  function apply() {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    trimmed.split(/\s+/).forEach((cls) => toggle(cls));
+    setValue("");
   }
 
-  // ─── حالت ۲: node اصلی انتخاب شده ───────────────────────────────────────────
-  const node = nodes.find((n) => n.id === selectedId);
-  // if (!node) return <EmptyPanel />;
-  if (!node) return <SlideSettingsPanel />;
   return (
-    <aside className="w-56 bg-slate-900 border-l border-slate-800 overflow-y-auto shrink-0">
-      <div className="p-4 space-y-5">
-        <div>
-          <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">
-            Properties
-          </p>
-          <span className="text-indigo-400 text-xs font-medium bg-indigo-500/10 px-2 py-0.5 rounded-full">
-            {node.type}
-          </span>
-        </div>
-
-        {/* Image URL */}
-        {node.type === "image" && (
-          <div>
-            <label className="block text-slate-400 text-xs mb-1.5">
-              Image URL
-            </label>
-            <input
-              type="text"
-              value={node.content ?? ""}
-              onChange={(e) => updateNode(node.id, { content: e.target.value })}
-              placeholder="https://..."
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs placeholder-text-slate-600 focus:outline-none focus:border-indigo-500 transition"
-            />
-          </div>
-        )}
-
-        {/* columns فقط راهنما نشون میده */}
-        {node.type === "columns" && (
-          <p className="text-slate-500 text-xs">
-            Click on an element inside a column to edit its properties.
-          </p>
-        )}
-
-        {/* Font Size */}
-        {node.type !== "image" && node.type !== "columns" && (
-          <>
-            <div>
-              <label className="block text-slate-400 text-xs mb-1.5">
-                Font Size
-              </label>
-              <div className="grid grid-cols-3 gap-1">
-                {fontSizes.map((size) => (
-                  <button
-                    key={size}
-                    onClick={() =>
-                      updateNode(node.id, { style: { fontSize: size } })
-                    }
-                    className={clsx(
-                      "py-1.5 rounded-lg text-xs transition",
-                      node.style.fontSize === size
-                        ? "bg-indigo-600 text-white"
-                        : "bg-slate-800 text-slate-400 hover:bg-slate-700",
-                    )}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-slate-400 text-xs mb-1.5">
-                Weight
-              </label>
-              <div className="grid grid-cols-2 gap-1">
-                {fontWeights.map((w) => (
-                  <button
-                    key={w}
-                    onClick={() =>
-                      updateNode(node.id, { style: { fontWeight: w } })
-                    }
-                    className={clsx(
-                      "py-1.5 rounded-lg text-xs capitalize transition",
-                      node.style.fontWeight === w
-                        ? "bg-indigo-600 text-white"
-                        : "bg-slate-800 text-slate-400 hover:bg-slate-700",
-                    )}
-                  >
-                    {w}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-slate-400 text-xs mb-1.5">
-                Alignment
-              </label>
-              <div className="flex gap-1">
-                {(["left", "center", "right"] as const).map((align) => {
-                  const Icon =
-                    align === "left"
-                      ? AlignLeft
-                      : align === "center"
-                        ? AlignCenter
-                        : AlignRight;
-                  return (
-                    <button
-                      key={align}
-                      onClick={() =>
-                        updateNode(node.id, { style: { textAlign: align } })
-                      }
-                      className={clsx(
-                        "flex-1 flex items-center justify-center py-2 rounded-lg transition",
-                        node.style.textAlign === align
-                          ? "bg-indigo-600 text-white"
-                          : "bg-slate-800 text-slate-400 hover:bg-slate-700",
-                      )}
-                    >
-                      <Icon className="w-3.5 h-3.5" />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-slate-400 text-xs mb-1.5">
-                Style
-              </label>
-              <button
-                onClick={() =>
-                  updateNode(node.id, { style: { italic: !node.style.italic } })
-                }
-                className={clsx(
-                  "flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition w-full",
-                  node.style.italic
-                    ? "bg-indigo-600 text-white"
-                    : "bg-slate-800 text-slate-400 hover:bg-slate-700",
-                )}
-              >
-                <Italic className="w-3.5 h-3.5" />
-                Italic
-              </button>
-            </div>
-
-            <div>
-              <label className="block text-slate-400 text-xs mb-1.5">
-                Color
-              </label>
-              <div className="grid grid-cols-4 gap-1.5">
-                {colors.map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => updateNode(node.id, { style: { color } })}
-                    className={clsx(
-                      "w-full aspect-square rounded-lg border-2 transition",
-                      node.style.color === color
-                        ? "border-indigo-400 scale-110"
-                        : "border-transparent hover:border-slate-500",
-                    )}
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
-              </div>
-              <div className="flex items-center gap-2 mt-2">
-                <input
-                  type="color"
-                  value={node.style.color ?? "#ffffff"}
-                  onChange={(e) =>
-                    updateNode(node.id, { style: { color: e.target.value } })
-                  }
-                  className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent"
-                />
-                <span className="text-slate-500 text-xs">Custom color</span>
-              </div>
-            </div>
-          </>
-        )}
+    <div>
+      {label && <p className="text-slate-500 text-xs mb-1">{label}</p>}
+      <div className="flex gap-1">
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && apply()}
+          placeholder={placeholder}
+          className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-300 font-mono outline-none focus:border-indigo-500 transition placeholder:text-slate-600"
+        />
+        <button
+          onClick={apply}
+          className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-2 rounded-lg transition font-bold"
+        >
+          +
+        </button>
       </div>
-    </aside>
+    </div>
   );
 }
 
-function EmptyPanel() {
+// ─── Typography Section ───────────────────────────────────────────────────────
+
+function TypographySection({ id }: { id: string }) {
+  const { toggle, has } = useNodeActions(id);
+
+  const sizes = [
+    "text-xs",
+    "text-sm",
+    "text-base",
+    "text-lg",
+    "text-xl",
+    "text-2xl",
+    "text-3xl",
+    "text-4xl",
+    "text-5xl",
+  ];
+  const weights = [
+    "font-light",
+    "font-normal",
+    "font-medium",
+    "font-semibold",
+    "font-bold",
+    "font-black",
+  ];
+  const aligns = [
+    { label: "L", value: "text-left" },
+    { label: "C", value: "text-center" },
+    { label: "R", value: "text-right" },
+    { label: "J", value: "text-justify" },
+  ];
+  const leadings = [
+    "leading-none",
+    "leading-tight",
+    "leading-normal",
+    "leading-relaxed",
+    "leading-loose",
+  ];
+  const trackings = [
+    "tracking-tighter",
+    "tracking-tight",
+    "tracking-normal",
+    "tracking-wide",
+    "tracking-wider",
+    "tracking-widest",
+  ];
+  const transforms = [
+    { label: "AA", value: "normal-case" },
+    { label: "Aa", value: "capitalize" },
+    { label: "AA", value: "uppercase" },
+    { label: "aa", value: "lowercase" },
+  ];
+
+  const activeSize = sizes.find(has) ?? "";
+  const activeWeight = weights.find(has) ?? "";
+  const activeAlign =
+    ["text-left", "text-center", "text-right", "text-justify"].find(has) ?? "";
+  const activeLeading = leadings.find(has) ?? "";
+  const activeTracking = trackings.find(has) ?? "";
+  const activeTransform =
+    ["uppercase", "lowercase", "capitalize", "normal-case"].find(has) ?? "";
+  const activeColor = PRESET_COLORS.find((c) => has(c.tw))?.tw ?? "";
+
   return (
-    <aside className="w-56 bg-slate-900 border-l border-slate-800 flex items-center justify-center shrink-0">
-      <p className="text-slate-600 text-xs text-center px-4">
-        Select an element to edit its properties
-      </p>
-    </aside>
+    <>
+      <ToggleRow
+        label="Font Size"
+        options={sizes.map((s) => ({
+          label: s.replace("text-", ""),
+          value: s,
+        }))}
+        active={activeSize}
+        onSelect={toggle}
+      />
+      <ToggleRow
+        label="Font Weight"
+        options={weights.map((w) => ({
+          label: w.replace("font-", ""),
+          value: w,
+        }))}
+        active={activeWeight}
+        onSelect={toggle}
+      />
+      <ToggleRow
+        label="Text Align"
+        options={aligns}
+        active={activeAlign}
+        onSelect={toggle}
+      />
+      <ToggleRow
+        label="Text Transform"
+        options={transforms}
+        active={activeTransform}
+        onSelect={toggle}
+      />
+
+      {/* Color */}
+      <div>
+        <p className="text-slate-500 text-xs mb-1.5">Text Color</p>
+        <div className="flex flex-wrap gap-1.5">
+          {PRESET_COLORS.map((c) => (
+            <button
+              key={c.tw}
+              onClick={() => toggle(c.tw)}
+              title={c.label}
+              className={clsx(
+                "w-6 h-6 rounded border-2 transition",
+                has(c.tw)
+                  ? "border-indigo-400 scale-110"
+                  : "border-transparent hover:border-slate-500",
+              )}
+              style={{
+                backgroundColor: c.label === "white" ? "#fff" : undefined,
+              }}
+            >
+              <span
+                className={clsx("block w-full h-full rounded text-xs", c.tw)}
+              >
+                {c.label === "white" ? "" : "A"}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <ArbitraryInput
+        id={id}
+        label=""
+        placeholder="e.g. text-[#ff6600]  text-red-100"
+      />
+
+      <ToggleRow
+        label="Line Height"
+        options={leadings.map((l) => ({
+          label: l.replace("leading-", ""),
+          value: l,
+        }))}
+        active={activeLeading}
+        onSelect={toggle}
+      />
+      <ToggleRow
+        label="Letter Spacing"
+        options={trackings.map((t) => ({
+          label: t.replace("tracking-", ""),
+          value: t,
+        }))}
+        active={activeTracking}
+        onSelect={toggle}
+      />
+
+      {/* Italic / Underline */}
+      <div>
+        <p className="text-slate-500 text-xs mb-1.5">Decoration</p>
+        <div className="flex gap-1">
+          {[
+            { label: "I", value: "italic" },
+            { label: "U", value: "underline" },
+            { label: "S", value: "line-through" },
+          ].map((d) => (
+            <button
+              key={d.value}
+              onClick={() => toggle(d.value)}
+              className={clsx(
+                "px-3 py-1 rounded text-xs font-mono transition",
+                has(d.value)
+                  ? "bg-indigo-600 text-white"
+                  : "bg-slate-800 text-slate-400 hover:bg-slate-700",
+              )}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
-// در EmptyPanel، به جای فقط "Select an element"،
-// یه بخش Slide Settings اضافه کن:
+
+// ─── Layout / Spacing Section ─────────────────────────────────────────────────
+
+function LayoutSection({ id }: { id: string }) {
+  const { toggle, has, node } = useNodeActions(id);
+
+  const displays = [
+    "block",
+    "flex",
+    "grid",
+    "inline",
+    "inline-block",
+    "inline-flex",
+    "hidden",
+  ];
+  const flexDirs = [
+    "flex-row",
+    "flex-col",
+    "flex-row-reverse",
+    "flex-col-reverse",
+  ];
+  const aligns = ["items-start", "items-center", "items-end", "items-stretch"];
+  const justifys = [
+    "justify-start",
+    "justify-center",
+    "justify-end",
+    "justify-between",
+    "justify-around",
+  ];
+  const cols = [
+    "grid-cols-1",
+    "grid-cols-2",
+    "grid-cols-3",
+    "grid-cols-4",
+    "grid-cols-6",
+  ];
+  const gaps = [
+    "gap-0",
+    "gap-1",
+    "gap-2",
+    "gap-3",
+    "gap-4",
+    "gap-6",
+    "gap-8",
+    "gap-10",
+    "gap-12",
+  ];
+  const paddings = [
+    "p-0",
+    "p-1",
+    "p-2",
+    "p-3",
+    "p-4",
+    "p-5",
+    "p-6",
+    "p-8",
+    "p-10",
+    "p-12",
+    "p-16",
+  ];
+  const margins = ["m-0", "m-1", "m-2", "m-3", "m-4", "m-6", "m-8"];
+  const widths = [
+    "w-auto",
+    "w-full",
+    "w-1/2",
+    "w-1/3",
+    "w-2/3",
+    "w-1/4",
+    "w-3/4",
+  ];
+  const heights = [
+    "h-auto",
+    "h-full",
+    "h-8",
+    "h-12",
+    "h-16",
+    "h-24",
+    "h-32",
+    "h-48",
+    "h-64",
+  ];
+  const roundeds = [
+    "rounded-none",
+    "rounded",
+    "rounded-md",
+    "rounded-lg",
+    "rounded-xl",
+    "rounded-2xl",
+    "rounded-full",
+  ];
+  const borders = ["border-0", "border", "border-2", "border-4"];
+  const borderColors = [
+    "border-slate-600",
+    "border-indigo-500",
+    "border-white/20",
+    "border-transparent",
+  ];
+  const shadows = [
+    "shadow-none",
+    "shadow-sm",
+    "shadow",
+    "shadow-md",
+    "shadow-lg",
+    "shadow-xl",
+  ];
+  const overflows = [
+    "overflow-hidden",
+    "overflow-auto",
+    "overflow-visible",
+    "overflow-scroll",
+  ];
+
+  const isContainer = ["div", "section", "ul", "ol"].includes(node?.tag ?? "");
+  const activeDisplay = displays.find(has) ?? "";
+  const activeFlex = flexDirs.find(has) ?? "";
+  const activeAlign = aligns.find(has) ?? "";
+  const activeJustify = justifys.find(has) ?? "";
+  const activeCols = cols.find(has) ?? "";
+  const activeGap = gaps.find(has) ?? "";
+  const activePad = paddings.find(has) ?? "";
+  const activeMargin = margins.find(has) ?? "";
+  const activeW = widths.find(has) ?? "";
+  const activeH = heights.find(has) ?? "";
+  const activeRound = roundeds.find(has) ?? "";
+  const activeBorder = borders.find(has) ?? "";
+  const activeShadow = shadows.find(has) ?? "";
+  const activeOverflow = overflows.find(has) ?? "";
+  const activeBorderColor = borderColors.find(has) ?? "";
+  const activeBg = PRESET_BG.find((c) => has(c.tw))?.tw ?? "";
+
+  return (
+    <>
+      {isContainer && (
+        <>
+          <ToggleRow
+            label="Display"
+            options={displays.map((d) => ({ label: d, value: d }))}
+            active={activeDisplay}
+            onSelect={toggle}
+          />
+          {activeDisplay === "flex" && (
+            <>
+              <ToggleRow
+                label="Flex Direction"
+                options={flexDirs.map((d) => ({
+                  label: d.replace("flex-", ""),
+                  value: d,
+                }))}
+                active={activeFlex}
+                onSelect={toggle}
+              />
+              <ToggleRow
+                label="Align Items"
+                options={aligns.map((a) => ({
+                  label: a.replace("items-", ""),
+                  value: a,
+                }))}
+                active={activeAlign}
+                onSelect={toggle}
+              />
+              <ToggleRow
+                label="Justify Content"
+                options={justifys.map((j) => ({
+                  label: j.replace("justify-", ""),
+                  value: j,
+                }))}
+                active={activeJustify}
+                onSelect={toggle}
+              />
+            </>
+          )}
+          <ArbitraryInput
+            id={id}
+            label="Custom Class"
+            placeholder="e.g. p-[40px]  mx-[20px]"
+          />
+          {activeDisplay === "grid" && (
+            <>
+              <ToggleRow
+                label="Grid Columns"
+                options={cols.map((c) => ({
+                  label: c.replace("grid-cols-", ""),
+                  value: c,
+                }))}
+                active={activeCols}
+                onSelect={toggle}
+              />
+              <ArbitraryInput
+                id={id}
+                label="Custom Columns"
+                placeholder="e.g. grid-cols-[2fr_1fr]"
+              />
+            </>
+          )}
+          <ToggleRow
+            label="Gap"
+            options={gaps.map((g) => ({
+              label: g.replace("gap-", ""),
+              value: g,
+            }))}
+            active={activeGap}
+            onSelect={toggle}
+          />
+        </>
+      )}
+
+      <ToggleRow
+        label="Padding"
+        options={paddings.map((p) => ({
+          label: p.replace("p-", ""),
+          value: p,
+        }))}
+        active={activePad}
+        onSelect={toggle}
+      />
+      <ToggleRow
+        label="Margin"
+        options={margins.map((m) => ({ label: m.replace("m-", ""), value: m }))}
+        active={activeMargin}
+        onSelect={toggle}
+      />
+      <ToggleRow
+        label="Width"
+        options={widths.map((w) => ({ label: w.replace("w-", ""), value: w }))}
+        active={activeW}
+        onSelect={toggle}
+      />
+      <ToggleRow
+        label="Height"
+        options={heights.map((h) => ({ label: h.replace("h-", ""), value: h }))}
+        active={activeH}
+        onSelect={toggle}
+      />
+      <ToggleRow
+        label="Border Radius"
+        options={roundeds.map((r) => ({
+          label: r.replace("rounded", "").replace("-", "") || "sm",
+          value: r,
+        }))}
+        active={activeRound}
+        onSelect={toggle}
+      />
+      <ToggleRow
+        label="Border Width"
+        options={borders.map((b) => ({
+          label: b.replace("border-", "") || "1",
+          value: b,
+        }))}
+        active={activeBorder}
+        onSelect={toggle}
+      />
+      {activeBorder !== "border-0" && (
+        <ToggleRow
+          label="Border Color"
+          options={borderColors.map((b) => ({
+            label: b.replace("border-", ""),
+            value: b,
+          }))}
+          active={activeBorderColor}
+          onSelect={toggle}
+        />
+      )}
+      <ToggleRow
+        label="Shadow"
+        options={shadows.map((s) => ({
+          label: s.replace("shadow", "").replace("-", "") || "md",
+          value: s,
+        }))}
+        active={activeShadow}
+        onSelect={toggle}
+      />
+      <ToggleRow
+        label="Overflow"
+        options={overflows.map((o) => ({
+          label: o.replace("overflow-", ""),
+          value: o,
+        }))}
+        active={activeOverflow}
+        onSelect={toggle}
+      />
+
+      {/* Background Color */}
+      <div>
+        <p className="text-slate-500 text-xs mb-1.5">Background</p>
+        <div className="flex flex-wrap gap-1.5">
+          {PRESET_BG.map((c) => (
+            <button
+              key={c.tw}
+              onClick={() => toggle(c.tw)}
+              title={c.label}
+              className={clsx(
+                "px-2 py-1 rounded text-xs font-mono transition border",
+                has(c.tw)
+                  ? "bg-indigo-600 text-white border-indigo-400"
+                  : "bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700",
+              )}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <ArbitraryInput
+        id={id}
+        label=""
+        placeholder="e.g. bg-[#1a1a2e]  bg-red-100"
+      />
+    </>
+  );
+}
+
+// در PropertiesPanel.tsx اضافه کن — بعد از LayoutSection:
+
+function DirectionSection({ id }: { id: string }) {
+  const updateNodeAttribute = useEditorStore((s) => s.updateNodeAttribute);
+  const node = useEditorStore((s) => s.findNodeById(id));
+  if (!node) return null;
+
+  const currentDir = (node.attributes?.dir as string) ?? "";
+
+  return (
+    <>
+      <ToggleRow
+        label="Text Direction"
+        options={[
+          { label: "LTR →", value: "ltr" },
+          { label: "→ RTL", value: "rtl" },
+          { label: "Auto", value: "auto" },
+        ]}
+        active={currentDir}
+        onSelect={(v) => updateNodeAttribute(id, "dir", v)}
+      />
+    </>
+  );
+}
+
+// و در PropertiesPanel — داخل <div className="flex-1 overflow-y-auto">:
+
+// ─── Image Section ─────────────────────────────────────────────────────────────
+
+function ImageSection({ id }: { id: string }) {
+  const updateNodeContent = useEditorStore((s) => s.updateNodeContent);
+  const findNodeById = useEditorStore((s) => s.findNodeById);
+  const node = findNodeById(id); // ✅ همه سطوح
+  if (!node) return null;
+
+  return (
+    <div>
+      <p className="text-slate-500 text-xs mb-1.5">Image URL</p>
+      <input
+        type="text"
+        value={node.content ?? ""}
+        onChange={(e) => updateNodeContent(id, e.target.value)}
+        placeholder="https://..."
+        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs outline-none focus:border-indigo-500 transition"
+      />
+      {node.content && (
+        <img
+          src={node.content}
+          alt="preview"
+          className="mt-2 rounded border border-slate-700 w-full object-cover max-h-24"
+        />
+      )}
+    </div>
+  );
+}
+
+function ActiveClasses({ id }: { id: string }) {
+  const { toggle } = useNodeActions(id);
+  const node = useEditorStore((s) => s.findNodeById(id));
+  const classes = node?.className?.split(" ").filter(Boolean) ?? [];
+  if (classes.length === 0) return null;
+
+  return (
+    <div>
+      <p className="text-slate-500 text-xs mb-1.5">Active Classes</p>
+      <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
+        {classes.map((cls) => (
+          <button
+            key={cls}
+            onClick={() => toggle(cls)}
+            title="Click to remove"
+            className="group flex items-center gap-0.5 bg-slate-800 hover:bg-red-900/40 border border-slate-700 hover:border-red-600/50 text-slate-300 hover:text-red-300 text-[10px] font-mono px-1.5 py-0.5 rounded transition"
+          >
+            {cls}
+            <span className="opacity-0 group-hover:opacity-100 text-red-400 text-[10px] transition leading-none">
+              ×
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Slide Settings ───────────────────────────────────────────────────────────
 
 function SlideSettingsPanel() {
   const { slideSettings, updateSlideSettings, resetSlideSettings } =
@@ -424,6 +727,7 @@ function SlideSettingsPanel() {
     padding,
     gap,
     canvasWidth,
+    canvasHeight,
     backgroundColor,
     backgroundType,
     gradientFrom,
@@ -432,26 +736,22 @@ function SlideSettingsPanel() {
   } = slideSettings;
 
   return (
-    <aside className="w-56 bg-slate-900 border-l border-slate-800 overflow-y-auto shrink-0">
-      <div className="p-4 space-y-5">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">
-            Slide Settings
-          </p>
-          <button
-            onClick={resetSlideSettings}
-            className="text-slate-600 hover:text-slate-400 text-xs transition"
-          >
-            Reset
-          </button>
-        </div>
-
-        {/* Canvas Size */}
+    <aside className="w-64 bg-slate-900 border-l border-slate-800 overflow-y-auto shrink-0">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800">
+        <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">
+          Slide Settings
+        </p>
+        <button
+          onClick={resetSlideSettings}
+          title="Reset"
+          className="text-slate-600 hover:text-slate-400 transition"
+        >
+          <RotateCcw className="w-3 h-3" />
+        </button>
+      </div>
+      <div className="p-3 space-y-3">
         <div>
-          <label className="block text-slate-400 text-xs mb-1.5">
-            Canvas Width (px)
-          </label>
+          <p className="text-slate-500 text-xs mb-1">Canvas Width</p>
           <input
             type="number"
             min={400}
@@ -461,18 +761,14 @@ function SlideSettingsPanel() {
             onChange={(e) =>
               updateSlideSettings({ canvasWidth: Number(e.target.value) })
             }
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs outline-none focus:border-indigo-500 transition"
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-white text-xs outline-none focus:border-indigo-500 transition"
           />
           <p className="text-slate-600 text-xs mt-1">
-            Height: {Math.round((canvasWidth * 9) / 16)}px (16:9)
+            Height: {canvasHeight}px (16:9)
           </p>
         </div>
-
-        {/* Padding */}
         <div>
-          <label className="block text-slate-400 text-xs mb-1.5">
-            Padding: {padding}px
-          </label>
+          <p className="text-slate-500 text-xs mb-1">Padding: {padding}px</p>
           <input
             type="range"
             min={0}
@@ -485,12 +781,8 @@ function SlideSettingsPanel() {
             className="w-full accent-indigo-500"
           />
         </div>
-
-        {/* Gap */}
         <div>
-          <label className="block text-slate-400 text-xs mb-1.5">
-            Element Gap: {gap}px
-          </label>
+          <p className="text-slate-500 text-xs mb-1">Gap: {gap}px</p>
           <input
             type="range"
             min={0}
@@ -503,19 +795,15 @@ function SlideSettingsPanel() {
             className="w-full accent-indigo-500"
           />
         </div>
-
-        {/* Background Type */}
         <div>
-          <label className="block text-slate-400 text-xs mb-1.5">
-            Background
-          </label>
-          <div className="grid grid-cols-2 gap-1">
+          <p className="text-slate-500 text-xs mb-1.5">Background</p>
+          <div className="flex gap-1 mb-2">
             {(["solid", "gradient"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => updateSlideSettings({ backgroundType: t })}
                 className={clsx(
-                  "py-1.5 rounded-lg text-xs capitalize transition",
+                  "flex-1 py-1 rounded text-xs transition",
                   backgroundType === t
                     ? "bg-indigo-600 text-white"
                     : "bg-slate-800 text-slate-400 hover:bg-slate-700",
@@ -525,75 +813,51 @@ function SlideSettingsPanel() {
               </button>
             ))}
           </div>
-        </div>
-
-        {/* Solid color */}
-        {backgroundType === "solid" && (
-          <div>
-            <label className="block text-slate-400 text-xs mb-1.5">Color</label>
+          {backgroundType === "solid" ? (
             <div className="flex items-center gap-2">
               <input
                 type="color"
-                value={`#${backgroundColor}`}
+                value={backgroundColor}
                 onChange={(e) =>
-                  updateSlideSettings({
-                    backgroundColor: e.target.value.replace("#", ""),
-                  })
+                  updateSlideSettings({ backgroundColor: e.target.value })
                 }
                 className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent"
               />
               <span className="text-slate-400 text-xs font-mono">
-                #{backgroundColor}
+                {backgroundColor}
               </span>
             </div>
-          </div>
-        )}
-
-        {/* Gradient */}
-        {backgroundType === "gradient" && (
-          <>
-            <div>
-              <label className="block text-slate-400 text-xs mb-1.5">
-                From
-              </label>
-              <div className="flex items-center gap-2">
+          ) : (
+            <>
+              <div className="flex items-center gap-2 mb-1">
                 <input
                   type="color"
-                  value={`#${gradientFrom}`}
+                  value={gradientFrom}
                   onChange={(e) =>
-                    updateSlideSettings({
-                      gradientFrom: e.target.value.replace("#", ""),
-                    })
+                    updateSlideSettings({ gradientFrom: e.target.value })
                   }
                   className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent"
                 />
                 <span className="text-slate-400 text-xs font-mono">
-                  #{gradientFrom}
+                  {gradientFrom}
                 </span>
               </div>
-            </div>
-            <div>
-              <label className="block text-slate-400 text-xs mb-1.5">To</label>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mb-2">
                 <input
                   type="color"
-                  value={`#${gradientTo}`}
+                  value={gradientTo}
                   onChange={(e) =>
-                    updateSlideSettings({
-                      gradientTo: e.target.value.replace("#", ""),
-                    })
+                    updateSlideSettings({ gradientTo: e.target.value })
                   }
                   className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent"
                 />
                 <span className="text-slate-400 text-xs font-mono">
-                  #{gradientTo}
+                  {gradientTo}
                 </span>
               </div>
-            </div>
-            <div>
-              <label className="block text-slate-400 text-xs mb-1.5">
+              <p className="text-slate-500 text-xs mb-1">
                 Angle: {gradientAngle}°
-              </label>
+              </p>
               <input
                 type="range"
                 min={0}
@@ -605,10 +869,99 @@ function SlideSettingsPanel() {
                 }
                 className="w-full accent-indigo-500"
               />
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
+    </aside>
+  );
+}
+
+// ─── Empty Panel ──────────────────────────────────────────────────────────────
+
+function EmptyPanel() {
+  return (
+    <aside className="w-64 bg-slate-900 border-l border-slate-800 flex items-center justify-center shrink-0">
+      <p className="text-slate-600 text-xs text-center px-4">
+        یه المنت انتخاب کن تا properties ش اینجا نشون داده بشه
+      </p>
+    </aside>
+  );
+}
+
+// ─── Raw Class Editor ──────────────────────────────────────────────────────────
+
+function RawClassEditor({ id }: { id: string }) {
+  const replaceClassName = useEditorStore((s) => s.replaceClassName);
+  const findNodeById = useEditorStore((s) => s.findNodeById);
+  const node = findNodeById(id); // ✅ همه سطوح
+  if (!node) return null;
+
+  return (
+    <div className="px-3 py-2 border-t border-slate-800">
+      <p className="text-slate-500 text-xs mb-1.5">Raw Tailwind Classes</p>
+      <textarea
+        value={node.className}
+        onChange={(e) => replaceClassName(id, e.target.value)}
+        rows={3}
+        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300 font-mono outline-none focus:border-indigo-500 transition resize-none"
+        placeholder="text-white font-bold ..."
+      />
+    </div>
+  );
+}
+
+// ─── Main PropertiesPanel ────────────────────────────────────────────────────
+
+export default function PropertiesPanel() {
+  const selectedId = useEditorStore((s) => s.selectedNodeId);
+  // const findNodeById = useEditorStore((s) => s.findNodeById);
+  const node = useEditorStore((s) => {
+    if (!selectedId) return null;
+    return s.findNodeById(selectedId);
+  });
+  if (!selectedId) return <SlideSettingsPanel />;
+
+  // const node = findNodeById(selectedId);
+  if (!node) return <EmptyPanel />;
+
+  const isTextTag = !["img", "div", "section", "ul", "ol"].includes(node.tag);
+  const isImgTag = node.tag === "img";
+
+  return (
+    <aside className="w-64 bg-slate-900 border-l border-slate-800 flex flex-col shrink-0 overflow-hidden">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-800 shrink-0">
+        <span className="text-xs font-mono font-bold bg-indigo-600 text-white px-1.5 py-0.5 rounded">
+          &lt;{node.tag}&gt;
+        </span>
+        <span className="text-slate-400 text-xs truncate">
+          {node.content?.slice(0, 20) ?? ""}
+        </span>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        {isImgTag && (
+          <Group label="🖼 Image">
+            <ImageSection id={selectedId} />
+          </Group>
+        )}
+        {isTextTag && (
+          <Group label="🔤 Typography">
+            <TypographySection id={selectedId} />
+          </Group>
+        )}
+        <Group label="📐 Layout & Spacing">
+          <LayoutSection id={selectedId} />
+        </Group>
+        <Group label="🌐 Direction & RTL">
+          <DirectionSection id={selectedId} />
+        </Group>
+        <Group label="✅ Active Classes">
+          <ActiveClasses id={selectedId} />
+        </Group>
+      </div>
+
+      <RawClassEditor id={selectedId} />
     </aside>
   );
 }

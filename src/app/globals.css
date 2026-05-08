@@ -1,5 +1,10 @@
 @import "tailwindcss";
+@import "tailwindcss";
 
+/* Safelist برای کلاس‌هایی که کاربر dynamic تایپ می‌کنه */
+@import "tailwindcss";
+
+@source inline("{p,px,py,pt,pb,pl,pr,m,mx,my,mt,mb,ml,mr,w,h,min-w,min-h,max-w,max-h,gap,text,bg,border,rounded,opacity,z,top,left,right,bottom,leading,tracking,grid-cols,grid-rows}-{0,1,2,3,4,5,6,7,8,9,10,11,12,14,16,20,24,28,32,36,40,44,48,52,56,60,64,72,80,96,auto,full,screen,none,xs,sm,md,lg,xl,2xl,3xl,4xl,5xl}");
 :root {
   --background: #ffffff;
   --foreground: #171717;
