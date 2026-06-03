@@ -1,13 +1,13 @@
+// src/app/api/projects/[id]/slides/[slideId]/duplicate/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
+import { Prisma } from "@/generated/prisma"; // ✅ مسیر صحیح
 
-export async function POST(
-  _req: NextRequest,
-  { params }: { params: { id: string; slideId: string } },
-) {
-  const { id: projectId, slideId } = params;
+type Params = { params: Promise<{ id: string; slideId: string }> };
 
-  // پیدا کردن اسلاید اصلی
+export async function POST(_req: NextRequest, { params }: Params) {
+  const { id, slideId } = await params;
+
   const original = await prisma.slide.findUnique({
     where: { id: slideId },
   });
@@ -16,21 +16,20 @@ export async function POST(
     return NextResponse.json({ error: "Slide not found" }, { status: 404 });
   }
 
-  // آخرین order رو پیدا کن
-  const last = await prisma.slide.findFirst({
-    where: { projectId },
-    orderBy: { order: "desc" },
+  const slides = await prisma.slide.findMany({
+    where: { projectId: id },
+    orderBy: { order: "asc" },
   });
 
-  // کپی بساز
-  const duplicate = await prisma.slide.create({
+  const newSlide = await prisma.slide.create({
     data: {
-      projectId,
-      title: `${original.title} (Copy)`,
-      nodes: original.nodes,
-      order: (last?.order ?? 0) + 1,
+      projectId: id,
+      title: original.title ? `${original.title} (Copy)` : null,
+      order: slides.length,
+      // ✅ cast به InputJsonValue تا خطای null برطرف شود
+      nodes: (original.nodes as Prisma.InputJsonValue) ?? Prisma.JsonNull,
     },
   });
 
-  return NextResponse.json(duplicate);
+  return NextResponse.json(newSlide, { status: 201 });
 }

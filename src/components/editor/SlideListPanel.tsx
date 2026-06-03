@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Plus, Loader2, Copy, Trash2 } from "lucide-react";
 import { clsx } from "clsx";
@@ -19,72 +19,49 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useProjectSlides, type Slide } from "@/hooks/useProjectSlides";
 import { SlideNode } from "@/types/slide";
-
-interface Slide {
-  id: string;
-  title: string;
-  order: number;
-  nodes: SlideNode[];
-}
 
 export default function SlideListPanel() {
   const { id, slideId } = useParams<{ id: string; slideId: string }>();
   const router = useRouter();
-  const [slides, setSlides] = useState<Slide[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [duplicating, setDuplicating] = useState<string | null>(null);
+
+  const {
+    slides,
+    loading,
+    duplicatingId,
+    createSlide,
+    duplicateSlide,
+    deleteSlide,
+    reorderSlides,
+  } = useProjectSlides(id);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
 
-  const loadSlides = useCallback(async () => {
-    const res = await fetch(`/api/projects/${id}/slides`);
-    const data = await res.json();
-    setSlides(data);
-    setLoading(false);
-  }, [id]);
-
-  useEffect(() => {
-    loadSlides();
-  }, [loadSlides, slideId]);
+  const slideIds = useMemo(() => slides.map((s) => s.id), [slides]);
 
   async function handleAdd() {
-    const res = await fetch(`/api/projects/${id}/slides`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "Untitled Slide" }),
-    });
-    const newSlide = await res.json();
-    await loadSlides();
+    const newSlide = await createSlide();
     router.push(`/projects/${id}/slides/${newSlide.id}`);
   }
 
   async function handleDuplicate(e: React.MouseEvent, targetSlideId: string) {
     e.stopPropagation();
-    setDuplicating(targetSlideId);
-    const res = await fetch(
-      `/api/projects/${id}/slides/${targetSlideId}/duplicate`,
-      { method: "POST" },
-    );
-    const newSlide = await res.json();
-    await loadSlides();
-    setDuplicating(null);
+    const newSlide = await duplicateSlide(targetSlideId);
     router.push(`/projects/${id}/slides/${newSlide.id}`);
   }
 
   async function handleDelete(e: React.MouseEvent, targetSlideId: string) {
     e.stopPropagation();
     if (slides.length === 1) return;
-    await fetch(`/api/projects/${id}/slides/${targetSlideId}`, {
-      method: "DELETE",
-    });
-    await loadSlides();
-    if (targetSlideId === slideId) {
-      const remaining = slides.filter((s) => s.id !== targetSlideId);
-      if (remaining.length > 0)
-        router.push(`/projects/${id}/slides/${remaining[0].id}`);
+
+    const remaining = slides.filter((s) => s.id !== targetSlideId);
+    await deleteSlide(targetSlideId);
+
+    if (targetSlideId === slideId && remaining.length > 0) {
+      router.push(`/projects/${id}/slides/${remaining[0].id}`);
     }
   }
 
@@ -95,13 +72,8 @@ export default function SlideListPanel() {
     const oldIndex = slides.findIndex((s) => s.id === active.id);
     const newIndex = slides.findIndex((s) => s.id === over.id);
     const reordered = arrayMove(slides, oldIndex, newIndex);
-    setSlides(reordered);
 
-    await fetch(`/api/projects/${id}/slides/reorder`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderedIds: reordered.map((s) => s.id) }),
-    });
+    await reorderSlides(reordered.map((s) => s.id));
   }
 
   if (loading) {
@@ -134,7 +106,7 @@ export default function SlideListPanel() {
           onDragEnd={handleDragEnd}
         >
           <SortableContext
-            items={slides.map((s) => s.id)}
+            items={slideIds}
             strategy={verticalListSortingStrategy}
           >
             {slides.map((slide, index) => (
@@ -143,7 +115,7 @@ export default function SlideListPanel() {
                 slide={slide}
                 index={index}
                 isActive={slide.id === slideId}
-                isDuplicating={duplicating === slide.id}
+                isDuplicating={duplicatingId === slide.id}
                 canDelete={slides.length > 1}
                 onClick={() =>
                   router.push(`/projects/${id}/slides/${slide.id}`)
@@ -159,7 +131,6 @@ export default function SlideListPanel() {
   );
 }
 
-// ─── Sortable Item ────────────────────────────────────────
 function SortableSlideItem({
   slide,
   index,
@@ -188,37 +159,30 @@ function SortableSlideItem({
     isDragging,
   } = useSortable({ id: slide.id });
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
-    zIndex: isDragging ? 10 : undefined,
-  };
-
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+        zIndex: isDragging ? 10 : undefined,
+      }}
       className={clsx(
         "group relative rounded-xl border cursor-pointer transition overflow-hidden",
         isActive
           ? "border-indigo-500 bg-slate-800"
           : "border-slate-700/50 hover:border-slate-600 bg-slate-800/50 hover:bg-slate-800",
       )}
-      onClick={onClick} // ← کلیک روی کارت
+      onClick={onClick}
     >
-      {/* Thumbnail — کلیک‌پذیر */}
       <SlideThumbnail nodes={slide.nodes} />
 
-      {/* Drag handle — فقط یه نقطه کوچیک گوشه */}
       <div
         {...attributes}
         {...listeners}
         onClick={(e) => e.stopPropagation()}
-        className="absolute bottom-7 left-1/2 -translate-x-1/2
-          opacity-0 group-hover:opacity-100 transition z-20
-          cursor-grab active:cursor-grabbing
-          bg-slate-800/90 rounded-full px-2 py-0.5"
+        className="absolute bottom-7 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition z-20 cursor-grab active:cursor-grabbing bg-slate-800/90 rounded-full px-2 py-0.5"
         title="Drag to reorder"
       >
         <div className="flex gap-0.5">
@@ -228,14 +192,12 @@ function SortableSlideItem({
         </div>
       </div>
 
-      {/* Slide number */}
       <div className="absolute top-1.5 left-1.5 bg-slate-900/80 rounded-md px-1.5 py-0.5">
         <span className="text-slate-400 text-[10px] font-medium">
           {index + 1}
         </span>
       </div>
 
-      {/* Action Buttons */}
       <div
         className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition z-20"
         onClick={(e) => e.stopPropagation()}
@@ -262,12 +224,10 @@ function SortableSlideItem({
         </button>
       </div>
 
-      {/* Title */}
       <div className="px-2 py-1.5">
         <p className="text-xs text-slate-300 truncate">{slide.title}</p>
       </div>
 
-      {/* Active indicator */}
       {isActive && (
         <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-indigo-500" />
       )}
@@ -275,19 +235,14 @@ function SortableSlideItem({
   );
 }
 
-// ─── Mini Thumbnail Renderer ──────────────────────────────
 function SlideThumbnail({ nodes }: { nodes: SlideNode[] }) {
   return (
-    <div
-      className="w-full bg-slate-950 relative overflow-hidden pointer-events-none"
-      style={{ aspectRatio: "16/9" }}
-    >
+    <div className="w-full bg-slate-950 relative overflow-hidden pointer-events-none aspect-video">
       {nodes.length === 0 ? (
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="text-slate-800 text-[8px]">Empty</span>
         </div>
       ) : (
-        // scale کوچک شده از canvas اصلی
         <div className="absolute inset-0 p-1.5 flex flex-col gap-1 overflow-hidden">
           {nodes.slice(0, 6).map((node) => (
             <MiniNode key={node.id} node={node} />
@@ -301,15 +256,11 @@ function SlideThumbnail({ nodes }: { nodes: SlideNode[] }) {
 function MiniNode({ node }: { node: SlideNode }) {
   if (node.type === "image") {
     return node.content ? (
-      <div
-        className="w-full rounded overflow-hidden shrink-0"
-        style={{ maxHeight: 24 }}
-      >
+      <div className="w-full rounded overflow-hidden shrink-0 max-h-6">
         <img
           src={node.content}
           alt=""
-          className="w-full h-full object-cover"
-          style={{ maxHeight: 24 }}
+          className="w-full h-full object-cover max-h-6"
         />
       </div>
     ) : (
@@ -317,34 +268,23 @@ function MiniNode({ node }: { node: SlideNode }) {
     );
   }
 
-  if (node.type === "columns") {
-    return (
-      <div
-        className="grid gap-0.5 shrink-0"
-        style={{
-          gridTemplateColumns: `repeat(${node.columns?.length ?? 2}, 1fr)`,
-        }}
-      >
-        {node.columns?.map((col) => (
-          <div key={col.id} className="bg-slate-800/60 rounded h-4" />
-        ))}
-      </div>
-    );
+  if (node.type === "container") {
+    return <div className="w-full h-4 rounded bg-slate-800/60 shrink-0" />;
   }
 
-  // text nodes
-  const isTitle = node.type === "title";
+  const isHeading = node.type === "heading";
+
   return (
     <div
       className={clsx(
         "rounded shrink-0 truncate",
-        isTitle
+        isHeading
           ? "h-2.5 bg-slate-500/60 w-3/4"
           : "h-1.5 bg-slate-700/80 w-full",
       )}
       style={{
-        backgroundColor: node.style?.color
-          ? `${node.style.color}40`
+        backgroundColor: node.styles?.color
+          ? `${node.styles.color}40`
           : undefined,
       }}
     />

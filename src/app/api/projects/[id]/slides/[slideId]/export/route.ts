@@ -1,4 +1,3 @@
-
 import { NextResponse, NextRequest } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
@@ -23,7 +22,8 @@ function nodeToHTML(node: SlideNode, depth = 0): string {
     return `${indent}<${node.tag}${classAttr}${attrsStr} />\n`;
   }
 
-  const children = node.children?.map((c) => nodeToHTML(c, depth + 1)).join("") ?? "";
+  const children =
+    node.children?.map((c) => nodeToHTML(c, depth + 1)).join("") ?? "";
   const content = node.content ? node.content : children;
 
   return `${indent}<${node.tag}${classAttr}${attrsStr}>\n${
@@ -45,7 +45,8 @@ function nodeToJSX(node: SlideNode, depth = 0): string {
     return `${indent}<img src="${node.content ?? ""}"${classAttr}${attrsStr} alt="${node.attributes?.alt ?? ""}" />\n`;
   }
 
-  const children = node.children?.map((c) => nodeToJSX(c, depth + 1)).join("") ?? "";
+  const children =
+    node.children?.map((c) => nodeToJSX(c, depth + 1)).join("") ?? "";
   const content = node.content ? node.content : children;
 
   return `${indent}<${node.tag}${classAttr}${attrsStr}>\n${
@@ -55,14 +56,16 @@ function nodeToJSX(node: SlideNode, depth = 0): string {
 
 // ─── POST /api/projects/[id]/slides/[slideId]/export ─────────────────────────
 
+// بعد ✅
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string; slideId: string } }
+  { params }: { params: Promise<{ id: string; slideId: string }> },
 ) {
+  const { id, slideId } = await params;
   const session = await auth();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { id, slideId } = params;
   const { format, slideSettings } = await req.json();
 
   const project = await prisma.project.findUnique({ where: { id } });
@@ -143,5 +146,8 @@ ${nodesJSX}    </section>
     });
   }
 
-  return NextResponse.json({ error: "Invalid format. Use: html | react" }, { status: 400 });
+  return NextResponse.json(
+    { error: "Invalid format. Use: html | react" },
+    { status: 400 },
+  );
 }

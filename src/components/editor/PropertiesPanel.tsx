@@ -1,26 +1,62 @@
 "use client";
 
+import { FlipHorizontal, FlipVertical, Crop } from "lucide-react";
 import { useState } from "react";
 import { useEditorStore } from "@/store/editorStore";
 import clsx from "clsx";
 import { RotateCcw } from "lucide-react";
+import { SLIDE_PRESETS } from "@/config/slideConfig";
+import { FontSection } from "./FontSection";
+import { ImageSourceInput } from "./ImageSourceInput";
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-// ─── helper: toggle class ────────────────────────────────────────────────────
+const ALIGN_CLASSES = [
+  "text-left",
+  "text-center",
+  "text-right",
+  "text-justify",
+] as const;
+type AlignClass = (typeof ALIGN_CLASSES)[number];
+const DEFAULT_ALIGN: AlignClass = "text-left";
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 
 function useNodeActions(id: string) {
   const toggleTailwindClass = useEditorStore((s) => s.toggleTailwindClass);
+  const replaceClassName = useEditorStore((s) => s.replaceClassName);
+  const setTailwindClass = useEditorStore((s) => s.setTailwindClass);
   const node = useEditorStore((s) => s.findNodeById(id));
 
   function toggle(cls: string) {
     toggleTailwindClass(id, cls);
   }
+
   function has(cls: string): boolean {
     return !!node?.className?.split(" ").includes(cls);
   }
-  return { toggle, has, className: node?.className ?? "", node };
+
+  /**
+   * Removes ALL align classes first, then applies the chosen one.
+   * If the user clicks the already-active align → revert to DEFAULT_ALIGN.
+   */
+  function setAlign(cls: AlignClass) {
+    const currentAlign = ALIGN_CLASSES.find((a) => has(a)) ?? DEFAULT_ALIGN;
+    const next: AlignClass = currentAlign === cls ? DEFAULT_ALIGN : cls;
+
+    // Build new className: strip all align classes, then inject `next`
+    const stripped = (node?.className ?? "")
+      .split(" ")
+      .filter(Boolean)
+      .filter((c) => !(ALIGN_CLASSES as readonly string[]).includes(c));
+
+    const newClassName = [...stripped, next].join(" ");
+    replaceClassName(id, newClassName);
+  }
+
+  return { toggle, has, setAlign, className: node?.className ?? "", node };
 }
 
-// ─── Group Component ─────────────────────────────────────────────────────────
+// ─── Group ────────────────────────────────────────────────────────────────────
 
 function Group({
   label,
@@ -37,14 +73,14 @@ function Group({
         className="w-full flex items-center justify-between px-3 py-2 text-slate-500 hover:text-slate-300 transition text-xs font-medium uppercase tracking-wider"
       >
         {label}
-        <span>{open ? "▴" : "▾"}</span>
+        <span>{open ? "▲" : "▼"}</span>
       </button>
       {open && <div className="px-3 pb-3 space-y-3">{children}</div>}
     </div>
   );
 }
 
-// ─── Row of toggle buttons ───────────────────────────────────────────────────
+// ─── ToggleRow ─────────────────────────────────────────────────────────────────
 
 function ToggleRow({
   label,
@@ -54,7 +90,7 @@ function ToggleRow({
 }: {
   label: string;
   options: { label: string; value: string }[];
-  active: string;
+  active: string | undefined;
   onSelect: (v: string) => void;
 }) {
   return (
@@ -80,7 +116,46 @@ function ToggleRow({
   );
 }
 
-// ─── Color Picker ────────────────────────────────────────────────────────────
+// ─── AlignRow (dedicated, bug-free) ───────────────────────────────────────────
+
+function AlignRow({ id }: { id: string }) {
+  const { has, setAlign } = useNodeActions(id);
+
+  // Compute the single active align — default to 'text-left' when none is set
+  const activeAlign: AlignClass =
+    ALIGN_CLASSES.find((a) => has(a)) ?? DEFAULT_ALIGN;
+
+  const options: { label: string; value: AlignClass }[] = [
+    { label: "L", value: "text-left" },
+    { label: "C", value: "text-center" },
+    { label: "R", value: "text-right" },
+    { label: "J", value: "text-justify" },
+  ];
+
+  return (
+    <div>
+      <p className="text-slate-500 text-xs mb-1.5">Text Align</p>
+      <div className="flex gap-1">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            onClick={() => setAlign(o.value)}
+            className={clsx(
+              "px-2 py-1 rounded text-xs transition font-mono",
+              activeAlign === o.value
+                ? "bg-indigo-600 text-white"
+                : "bg-slate-800 text-slate-400 hover:bg-slate-700",
+            )}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Color Presets ─────────────────────────────────────────────────────────────
 
 const PRESET_COLORS = [
   { label: "white", tw: "text-white" },
@@ -105,6 +180,8 @@ const PRESET_BG = [
   { label: "red-500/20", tw: "bg-red-500/20" },
 ];
 
+// ─── ArbitraryInput ────────────────────────────────────────────────────────────
+
 function ArbitraryInput({
   id,
   label,
@@ -120,13 +197,13 @@ function ArbitraryInput({
   function apply() {
     const trimmed = value.trim();
     if (!trimmed) return;
-    trimmed.split(/\s+/).forEach((cls) => toggle(cls));
+    trimmed.split(" ").forEach((cls) => toggle(cls));
     setValue("");
   }
 
   return (
     <div>
-      {label && <p className="text-slate-500 text-xs mb-1">{label}</p>}
+      <p className="text-slate-500 text-xs mb-1">{label}</p>
       <div className="flex gap-1">
         <input
           type="text"
@@ -147,7 +224,7 @@ function ArbitraryInput({
   );
 }
 
-// ─── Typography Section ───────────────────────────────────────────────────────
+// ─── Typography Section ────────────────────────────────────────────────────────
 
 function TypographySection({ id }: { id: string }) {
   const { toggle, has } = useNodeActions(id);
@@ -171,12 +248,6 @@ function TypographySection({ id }: { id: string }) {
     "font-bold",
     "font-black",
   ];
-  const aligns = [
-    { label: "L", value: "text-left" },
-    { label: "C", value: "text-center" },
-    { label: "R", value: "text-right" },
-    { label: "J", value: "text-justify" },
-  ];
   const leadings = [
     "leading-none",
     "leading-tight",
@@ -199,15 +270,17 @@ function TypographySection({ id }: { id: string }) {
     { label: "aa", value: "lowercase" },
   ];
 
-  const activeSize = sizes.find(has) ?? "";
-  const activeWeight = weights.find(has) ?? "";
-  const activeAlign =
-    ["text-left", "text-center", "text-right", "text-justify"].find(has) ?? "";
-  const activeLeading = leadings.find(has) ?? "";
-  const activeTracking = trackings.find(has) ?? "";
-  const activeTransform =
-    ["uppercase", "lowercase", "capitalize", "normal-case"].find(has) ?? "";
-  const activeColor = PRESET_COLORS.find((c) => has(c.tw))?.tw ?? "";
+  const activeSize = sizes.find(has);
+  const activeWeight = weights.find(has);
+  const activeLeading = leadings.find(has);
+  const activeTracking = trackings.find(has);
+  const activeTransform = [
+    "uppercase",
+    "lowercase",
+    "capitalize",
+    "normal-case",
+  ].find(has);
+  const activeColor = PRESET_COLORS.find((c) => has(c.tw))?.tw;
 
   return (
     <>
@@ -229,12 +302,10 @@ function TypographySection({ id }: { id: string }) {
         active={activeWeight}
         onSelect={toggle}
       />
-      <ToggleRow
-        label="Text Align"
-        options={aligns}
-        active={activeAlign}
-        onSelect={toggle}
-      />
+
+      {/* ✅ Dedicated AlignRow — no bugs */}
+      <AlignRow id={id} />
+
       <ToggleRow
         label="Text Transform"
         options={transforms}
@@ -242,7 +313,7 @@ function TypographySection({ id }: { id: string }) {
         onSelect={toggle}
       />
 
-      {/* Color */}
+      {/* Text Color */}
       <div>
         <p className="text-slate-500 text-xs mb-1.5">Text Color</p>
         <div className="flex flex-wrap gap-1.5">
@@ -262,19 +333,25 @@ function TypographySection({ id }: { id: string }) {
               }}
             >
               <span
-                className={clsx("block w-full h-full rounded text-xs", c.tw)}
+                className={clsx(
+                  "block w-full h-full rounded text-xs",
+                  c.tw,
+                  c.label === "white" ? "" : "",
+                )}
               >
-                {c.label === "white" ? "" : "A"}
+                A
               </span>
             </button>
           ))}
         </div>
       </div>
+
       <FontSection id={id} />
+
       <ArbitraryInput
         id={id}
-        label=""
-        placeholder="e.g. text-[#ff6600]  text-red-100"
+        label="Custom Class"
+        placeholder="e.g. text-[#ff6600] text-red-100"
       />
 
       <ToggleRow
@@ -296,7 +373,7 @@ function TypographySection({ id }: { id: string }) {
         onSelect={toggle}
       />
 
-      {/* Italic / Underline */}
+      {/* Decoration */}
       <div>
         <p className="text-slate-500 text-xs mb-1.5">Decoration</p>
         <div className="flex gap-1">
@@ -324,7 +401,7 @@ function TypographySection({ id }: { id: string }) {
   );
 }
 
-// ─── Layout / Spacing Section ─────────────────────────────────────────────────
+// ─── Layout Section ────────────────────────────────────────────────────────────
 
 function LayoutSection({ id }: { id: string }) {
   const { toggle, has, node } = useNodeActions(id);
@@ -436,22 +513,23 @@ function LayoutSection({ id }: { id: string }) {
   ];
 
   const isContainer = ["div", "section", "ul", "ol"].includes(node?.tag ?? "");
-  const activeDisplay = displays.find(has) ?? "";
-  const activeFlex = flexDirs.find(has) ?? "";
-  const activeAlign = aligns.find(has) ?? "";
-  const activeJustify = justifys.find(has) ?? "";
-  const activeCols = cols.find(has) ?? "";
-  const activeGap = gaps.find(has) ?? "";
-  const activePad = paddings.find(has) ?? "";
-  const activeMargin = margins.find(has) ?? "";
-  const activeW = widths.find(has) ?? "";
-  const activeH = heights.find(has) ?? "";
-  const activeRound = roundeds.find(has) ?? "";
-  const activeBorder = borders.find(has) ?? "";
-  const activeShadow = shadows.find(has) ?? "";
-  const activeOverflow = overflows.find(has) ?? "";
-  const activeBorderColor = borderColors.find(has) ?? "";
-  const activeBg = PRESET_BG.find((c) => has(c.tw))?.tw ?? "";
+
+  const activeDisplay = displays.find(has);
+  const activeFlex = flexDirs.find(has);
+  const activeAlign = aligns.find(has);
+  const activeJustify = justifys.find(has);
+  const activeCols = cols.find(has);
+  const activeGap = gaps.find(has);
+  const activePad = paddings.find(has);
+  const activeMargin = margins.find(has);
+  const activeW = widths.find(has);
+  const activeH = heights.find(has);
+  const activeRound = roundeds.find(has);
+  const activeBorder = borders.find(has);
+  const activeBorderColor = borderColors.find(has);
+  const activeShadow = shadows.find(has);
+  const activeOverflow = overflows.find(has);
+  const activeBg = PRESET_BG.find((c) => has(c.tw))?.tw;
 
   return (
     <>
@@ -494,11 +572,6 @@ function LayoutSection({ id }: { id: string }) {
               />
             </>
           )}
-          <ArbitraryInput
-            id={id}
-            label="Custom Class"
-            placeholder="e.g. p-[40px]  mx-[20px]"
-          />
           {activeDisplay === "grid" && (
             <>
               <ToggleRow
@@ -625,77 +698,280 @@ function LayoutSection({ id }: { id: string }) {
           ))}
         </div>
       </div>
+
       <ArbitraryInput
         id={id}
-        label=""
-        placeholder="e.g. bg-[#1a1a2e]  bg-red-100"
+        label="Custom Class"
+        placeholder="e.g. bg-[#1a1a2e] bg-red-100"
       />
     </>
   );
 }
 
-// در PropertiesPanel.tsx اضافه کن — بعد از LayoutSection:
+// ─── Direction Section ─────────────────────────────────────────────────────────
 
 function DirectionSection({ id }: { id: string }) {
   const updateNodeAttribute = useEditorStore((s) => s.updateNodeAttribute);
   const node = useEditorStore((s) => s.findNodeById(id));
   if (!node) return null;
-
   const currentDir = (node.attributes?.dir as string) ?? "";
-
   return (
-    <>
-      <ToggleRow
-        label="Text Direction"
-        options={[
-          { label: "LTR →", value: "ltr" },
-          { label: "→ RTL", value: "rtl" },
-          { label: "Auto", value: "auto" },
-        ]}
-        active={currentDir}
-        onSelect={(v) => updateNodeAttribute(id, "dir", v)}
-      />
-    </>
+    <ToggleRow
+      label="Text Direction"
+      options={[
+        { label: "LTR", value: "ltr" },
+        { label: "RTL", value: "rtl" },
+        { label: "Auto", value: "auto" },
+      ]}
+      active={currentDir}
+      onSelect={(v) => updateNodeAttribute(id, "dir", v)}
+    />
   );
 }
-
-// و در PropertiesPanel — داخل <div className="flex-1 overflow-y-auto">:
 
 // ─── Image Section ─────────────────────────────────────────────────────────────
 
+// جایگزین با:
 function ImageSection({ id }: { id: string }) {
   const updateNodeContent = useEditorStore((s) => s.updateNodeContent);
-  const findNodeById = useEditorStore((s) => s.findNodeById);
-  const node = findNodeById(id); // ✅ همه سطوح
-  if (!node) return null;
+  const updateNodeStyles = useEditorStore((s) => s.updateNodeStyles);
+  const updateNodeAttribute = useEditorStore((s) => s.updateNodeAttribute);
+  const toggleTailwindClass = useEditorStore((s) => s.toggleTailwindClass);
+  const node = useEditorStore((s) => s.findNodeById(id));
+  const projectId = useEditorStore((s) => s.projectId);
+
+  if (!node || !projectId) return null;
+
+  const styles = (node.styles as Record<string, string>) ?? {};
+  const currentW = styles.width ?? "";
+  const currentH = styles.height ?? "";
+  const currentOpacity = styles.opacity ?? "1";
+  const currentRadius = styles.borderRadius ?? "";
+  const currentFit = styles.objectFit ?? "cover";
+
+  // Fit presets
+  const fitOptions = ["cover", "contain", "fill", "none", "scale-down"];
+
+  // Filter presets
+  const filterOptions = [
+    { label: "None", value: "" },
+    { label: "Grayscale", value: "grayscale(100%)" },
+    { label: "Sepia", value: "sepia(80%)" },
+    { label: "Blur", value: "blur(4px)" },
+    { label: "Bright", value: "brightness(1.3)" },
+    { label: "Contrast", value: "contrast(1.4)" },
+    { label: "Invert", value: "invert(100%)" },
+  ];
+  const currentFilter = styles.filter ?? "";
 
   return (
-    <div>
-      <p className="text-slate-500 text-xs mb-1.5">Image URL</p>
-      <input
-        type="text"
-        value={node.content ?? ""}
-        onChange={(e) => updateNodeContent(id, e.target.value)}
-        placeholder="https://..."
-        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs outline-none focus:border-indigo-500 transition"
-      />
-      {node.content && (
-        <img
-          src={node.content}
-          alt="preview"
-          className="mt-2 rounded border border-slate-700 w-full object-cover max-h-24"
+    <div className="space-y-3">
+      {/* Image Source */}
+      <div>
+        <p className="text-slate-500 text-xs mb-1.5">Image Source</p>
+        <ImageSourceInput
+          value={node.content ?? ""}
+          onChange={(url) => updateNodeContent(id, url)}
+          projectId={projectId}
         />
-      )}
+      </div>
+
+      {/* Alt Text */}
+      <div>
+        <p className="text-slate-500 text-xs mb-1.5">Alt Text</p>
+        <input
+          type="text"
+          value={(node.attributes?.alt as string) ?? ""}
+          onChange={(e) => updateNodeAttribute(id, "alt", e.target.value)}
+          placeholder="Describe the image..."
+          className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-white text-xs outline-none focus:border-indigo-500 transition"
+        />
+      </div>
+
+      {/* Size */}
+      <div>
+        <p className="text-slate-500 text-xs mb-1.5">Size (px)</p>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <div className="grid grid-cols-2 gap-2">
+              {/* W */}
+              <div>
+                <p className="text-slate-600 text-xs mb-1">W</p>
+                <input
+                  type="number"
+                  min={20}
+                  value={parseInt(currentW) || 200}
+                  onChange={(e) =>
+                    updateNodeStyles(id, { width: `${e.target.value}px` })
+                  }
+                  placeholder="auto"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-white text-xs outline-none focus:border-indigo-500 transition"
+                />
+              </div>
+              {/* H */}
+              <div>
+                <p className="text-slate-600 text-xs mb-1">H</p>
+                <input
+                  type="number"
+                  min={20}
+                  value={parseInt(currentH) || 150}
+                  onChange={(e) =>
+                    updateNodeStyles(id, { height: `${e.target.value}px` })
+                  }
+                  placeholder="auto"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-white text-xs outline-none focus:border-indigo-500 transition"
+                />
+              </div>
+            </div>
+          </div>
+          <div>
+            <p className="text-slate-600 text-xs mb-1">H</p>
+            <input
+              type="number"
+              min={20}
+              value={parseInt(currentH) || ""}
+              onChange={(e) =>
+                updateNodeStyles(id, { height: `${e.target.value}px` })
+              }
+              placeholder="auto"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-white text-xs outline-none focus:border-indigo-500 transition"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Object Fit */}
+      <div>
+        <p className="text-slate-500 text-xs mb-1.5">Object Fit</p>
+        <div className="flex flex-wrap gap-1">
+          {fitOptions.map((fit) => (
+            <button
+              key={fit}
+              onClick={() => updateNodeStyles(id, { objectFit: fit })}
+              className={clsx(
+                "px-2 py-1 rounded text-xs transition",
+                currentFit === fit
+                  ? "bg-indigo-600 text-white"
+                  : "bg-slate-800 text-slate-400 hover:bg-slate-700",
+              )}
+            >
+              {fit}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Border Radius */}
+      <div>
+        <p className="text-slate-500 text-xs mb-1.5">Border Radius</p>
+        <div className="flex gap-1 flex-wrap">
+          {[
+            { label: "None", value: "0px" },
+            { label: "SM", value: "6px" },
+            { label: "MD", value: "12px" },
+            { label: "LG", value: "20px" },
+            { label: "Full", value: "9999px" },
+          ].map((r) => (
+            <button
+              key={r.value}
+              onClick={() => updateNodeStyles(id, { borderRadius: r.value })}
+              className={clsx(
+                "px-2 py-1 rounded text-xs transition",
+                currentRadius === r.value
+                  ? "bg-indigo-600 text-white"
+                  : "bg-slate-800 text-slate-400 hover:bg-slate-700",
+              )}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Opacity */}
+      <div>
+        <p className="text-slate-500 text-xs mb-1.5">
+          Opacity — {Math.round(parseFloat(currentOpacity) * 100)}%
+        </p>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={parseFloat(currentOpacity)}
+          onChange={(e) => updateNodeStyles(id, { opacity: e.target.value })}
+          className="w-full accent-indigo-500"
+        />
+      </div>
+
+      {/* Filter */}
+      <div>
+        <p className="text-slate-500 text-xs mb-1.5">Filter</p>
+        <div className="flex flex-wrap gap-1">
+          {filterOptions.map((f) => (
+            <button
+              key={f.label}
+              onClick={() => updateNodeStyles(id, { filter: f.value })}
+              className={clsx(
+                "px-2 py-1 rounded text-xs transition",
+                currentFilter === f.value
+                  ? "bg-indigo-600 text-white"
+                  : "bg-slate-800 text-slate-400 hover:bg-slate-700",
+              )}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Flip */}
+      <div>
+        <p className="text-slate-500 text-xs mb-1.5">Flip</p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              const cur = styles.transform ?? "";
+              const hasFlipX = cur.includes("scaleX(-1)");
+              updateNodeStyles(id, {
+                transform: hasFlipX
+                  ? cur.replace("scaleX(-1)", "").trim()
+                  : `${cur} scaleX(-1)`.trim(),
+              });
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition"
+          >
+            <FlipHorizontal className="w-3 h-3" />
+            Horizontal
+          </button>
+          <button
+            onClick={() => {
+              const cur = styles.transform ?? "";
+              const hasFlipY = cur.includes("scaleY(-1)");
+              updateNodeStyles(id, {
+                transform: hasFlipY
+                  ? cur.replace("scaleY(-1)", "").trim()
+                  : `${cur} scaleY(-1)`.trim(),
+              });
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition"
+          >
+            <FlipVertical className="w-3 h-3" />
+            Vertical
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
+
+// ─── Active Classes ────────────────────────────────────────────────────────────
 
 function ActiveClasses({ id }: { id: string }) {
   const { toggle } = useNodeActions(id);
   const node = useEditorStore((s) => s.findNodeById(id));
   const classes = node?.className?.split(" ").filter(Boolean) ?? [];
   if (classes.length === 0) return null;
-
   return (
     <div>
       <p className="text-slate-500 text-xs mb-1.5">Active Classes</p>
@@ -709,7 +985,7 @@ function ActiveClasses({ id }: { id: string }) {
           >
             {cls}
             <span className="opacity-0 group-hover:opacity-100 text-red-400 text-[10px] transition leading-none">
-              ×
+              ✕
             </span>
           </button>
         ))}
@@ -718,28 +994,33 @@ function ActiveClasses({ id }: { id: string }) {
   );
 }
 
-// ─── Slide Settings ───────────────────────────────────────────────────────────
+// ─── Raw Class Editor ──────────────────────────────────────────────────────────
 
-import { SLIDE_PRESETS } from "@/config/slideConfig";
+function RawClassEditor({ id }: { id: string }) {
+  const replaceClassName = useEditorStore((s) => s.replaceClassName);
+  const node = useEditorStore((s) => s.findNodeById(id));
+  if (!node) return null;
+  return (
+    <div className="px-3 py-2 border-t border-slate-800">
+      <p className="text-slate-500 text-xs mb-1.5">Raw Tailwind Classes</p>
+      <textarea
+        value={node.className}
+        onChange={(e) => replaceClassName(id, e.target.value)}
+        rows={3}
+        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300 font-mono outline-none focus:border-indigo-500 transition resize-none placeholder:text-white font-bold"
+      />
+    </div>
+  );
+}
+
+// ─── Slide Settings Panel ──────────────────────────────────────────────────────
 
 function SlideSettingsPanel() {
   const { slideSettings, updateSlideSettings, resetSlideSettings } =
     useEditorStore();
-  const {
-    padding,
-    gap,
-    canvasWidth,
-    canvasHeight,
-    backgroundColor,
-    backgroundType,
-    gradientFrom,
-    gradientTo,
-    gradientAngle,
-  } = slideSettings;
-
+  const { canvasWidth, canvasHeight } = slideSettings;
   return (
     <aside className="w-64 bg-slate-900 border-l border-slate-800 overflow-y-auto shrink-0">
-      {/* header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800">
         <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">
           Slide Settings
@@ -752,9 +1033,7 @@ function SlideSettingsPanel() {
           <RotateCcw className="w-3 h-3" />
         </button>
       </div>
-
       <div className="p-3 space-y-3">
-        {/* ── Preset Sizes ── */}
         <div>
           <p className="text-slate-500 text-xs mb-1.5">Preset Sizes</p>
           <div className="grid grid-cols-1 gap-1">
@@ -782,8 +1061,6 @@ function SlideSettingsPanel() {
             ))}
           </div>
         </div>
-
-        {/* ── Custom Width & Height ── */}
         <div className="grid grid-cols-2 gap-2">
           <div>
             <p className="text-slate-500 text-xs mb-1">Width</p>
@@ -814,62 +1091,33 @@ function SlideSettingsPanel() {
             />
           </div>
         </div>
-        <p className="text-slate-600 text-xs -mt-1">
+        <p className="text-slate-600 text-xs">
           Ratio: {(canvasWidth / canvasHeight).toFixed(2)}:1
         </p>
-
-        {/* ... بقیه settings (padding, gap, background) مثل قبل */}
       </div>
     </aside>
   );
 }
 
-// ─── Empty Panel ──────────────────────────────────────────────────────────────
-
 function EmptyPanel() {
   return (
     <aside className="w-64 bg-slate-900 border-l border-slate-800 flex items-center justify-center shrink-0">
       <p className="text-slate-600 text-xs text-center px-4">
-        یه المنت انتخاب کن تا properties ش اینجا نشون داده بشه
+        Select an element to see its properties
       </p>
     </aside>
   );
 }
 
-// ─── Raw Class Editor ──────────────────────────────────────────────────────────
-
-function RawClassEditor({ id }: { id: string }) {
-  const replaceClassName = useEditorStore((s) => s.replaceClassName);
-  const findNodeById = useEditorStore((s) => s.findNodeById);
-  const node = findNodeById(id); // ✅ همه سطوح
-  if (!node) return null;
-
-  return (
-    <div className="px-3 py-2 border-t border-slate-800">
-      <p className="text-slate-500 text-xs mb-1.5">Raw Tailwind Classes</p>
-      <textarea
-        value={node.className}
-        onChange={(e) => replaceClassName(id, e.target.value)}
-        rows={3}
-        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300 font-mono outline-none focus:border-indigo-500 transition resize-none"
-        placeholder="text-white font-bold ..."
-      />
-    </div>
-  );
-}
-
-// ─── Main PropertiesPanel ────────────────────────────────────────────────────
+// ─── Main Export ───────────────────────────────────────────────────────────────
 
 export default function PropertiesPanel() {
   const selectedId = useEditorStore((s) => s.selectedNodeId);
-  // const findNodeById = useEditorStore((s) => s.findNodeById);
-  const node = useEditorStore((s) => {
-    if (!selectedId) return null;
-    return s.findNodeById(selectedId);
-  });
+  const findNodeById = useEditorStore((s) => s.findNodeById);
+
   if (!selectedId) return <SlideSettingsPanel />;
 
-  // const node = findNodeById(selectedId);
+  const node = findNodeById(selectedId);
   if (!node) return <EmptyPanel />;
 
   const isTextTag = !["img", "div", "section", "ul", "ol"].includes(node.tag);
@@ -877,6 +1125,7 @@ export default function PropertiesPanel() {
 
   return (
     <aside className="w-64 bg-slate-900 border-l border-slate-800 flex flex-col shrink-0 overflow-hidden">
+      {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-800 shrink-0">
         <span className="text-xs font-mono font-bold bg-indigo-600 text-white px-1.5 py-0.5 rounded">
           &lt;{node.tag}&gt;
@@ -888,84 +1137,27 @@ export default function PropertiesPanel() {
 
       <div className="flex-1 overflow-y-auto">
         {isImgTag && (
-          <Group label="🖼 Image">
+          <Group label="Image">
             <ImageSection id={selectedId} />
           </Group>
         )}
         {isTextTag && (
-          <Group label="🔤 Typography">
+          <Group label="Typography">
             <TypographySection id={selectedId} />
           </Group>
         )}
-        <Group label="📐 Layout & Spacing">
+        <Group label="Layout & Spacing">
           <LayoutSection id={selectedId} />
         </Group>
-        <Group label="🌐 Direction & RTL">
+        <Group label="Direction (RTL)">
           <DirectionSection id={selectedId} />
         </Group>
-        <Group label="✅ Active Classes">
+        <Group label="Active Classes">
           <ActiveClasses id={selectedId} />
         </Group>
       </div>
 
       <RawClassEditor id={selectedId} />
     </aside>
-  );
-}
-
-import { FONTS } from "@/config/fonts";
-
-function FontSection({ id }: { id: string }) {
-  const updateNodeStyle = useEditorStore((s) => s.updateNodeStyle);
-  const node = useEditorStore((s) => s.findNodeById(id));
-  const currentFamily = node?.styles?.fontFamily ?? "";
-
-  const enFonts = FONTS.filter((f) => f.lang === "en");
-  const faFonts = FONTS.filter((f) => f.lang === "fa");
-
-  function applyFont(family: string) {
-    updateNodeStyle(id, "fontFamily", family);
-  }
-
-  return (
-    <div className="space-y-2">
-      <p className="text-slate-500 text-xs mb-1.5">English Fonts</p>
-      <div className="grid grid-cols-2 gap-1">
-        {enFonts.map((f) => (
-          <button
-            key={f.id}
-            onClick={() => applyFont(f.family)}
-            className={clsx(
-              "px-2 py-1.5 rounded text-xs text-left transition truncate",
-              currentFamily === f.family
-                ? "bg-indigo-600 text-white"
-                : "bg-slate-800 text-slate-400 hover:bg-slate-700",
-            )}
-            style={{ fontFamily: f.family }} // ← preview واقعی
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-      <p className="text-slate-500 text-xs mt-2 mb-1.5">فارسی</p>
-      <div className="grid grid-cols-2 gap-1">
-        {faFonts.map((f) => (
-          <button
-            key={f.id}
-            onClick={() => applyFont(f.family)}
-            dir="rtl"
-            className={clsx(
-              "px-2 py-1.5 rounded text-xs text-right transition truncate",
-              currentFamily === f.family
-                ? "bg-indigo-600 text-white"
-                : "bg-slate-800 text-slate-400 hover:bg-slate-700",
-            )}
-            style={{ fontFamily: f.family }}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-    </div>
   );
 }
