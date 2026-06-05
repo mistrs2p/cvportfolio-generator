@@ -20,10 +20,23 @@ export default function DashboardPage() {
   const [showModal, setShowModal] = useState(false);
 
   async function fetchProjects() {
-    const res = await fetch("/api/projects");
-    const data = await res.json();
-    setProjects(data);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/projects");
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error("Projects API error:", data);
+        setProjects([]);
+        return;
+      }
+
+      setProjects(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to fetch projects:", err);
+      setProjects([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
