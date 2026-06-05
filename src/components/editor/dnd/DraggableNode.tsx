@@ -15,6 +15,7 @@ interface Props {
   className?: string;
   onClick?: (e: React.MouseEvent) => void;
   onDoubleClick?: (e: React.MouseEvent) => void;
+  isSelected?: boolean;
 }
 
 export function DraggableNode({

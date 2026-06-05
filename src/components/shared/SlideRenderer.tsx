@@ -1,22 +1,60 @@
-// src/components/shared/SlideRenderer.tsx
 "use client";
 
-import { SlideNode, SlideSettings } from "@/types/slide";
+import type { SlideNode, SlideSettings } from "@/types/slide";
 import { JSX } from "react";
 
-// ─────────────────────────────────────────────
-// رندر هر node به صورت بازگشتی
-// ─────────────────────────────────────────────
-
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface NodeRendererProps {
   node: SlideNode;
-  // فقط در editor استفاده می‌شه
   selectedId?: string | null;
   onSelect?: (id: string | null) => void;
   onContentChange?: (id: string, content: string) => void;
   isEditing?: boolean;
 }
 
+interface SlideViewProps {
+  nodes: SlideNode[];
+  settings?: Partial<SlideSettings>;
+  // editor props (preview / shared render)
+  selectedId?: string | null;
+  onSelect?: (id: string | null) => void;
+  onContentChange?: (id: string, content: string) => void;
+  isEditing?: boolean;
+}
+
+// ─── Allowed tags ─────────────────────────────────────────────────────────────
+const ALLOWED_TAGS: ReadonlySet<keyof JSX.IntrinsicElements> = new Set([
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "p",
+  "span",
+  "a",
+  "strong",
+  "em",
+  "div",
+  "section",
+  "article",
+  "ul",
+  "ol",
+  "li",
+  "img",
+  "button",
+  "hr",
+  "blockquote",
+]);
+
+function getSafeTag(tag?: string): keyof JSX.IntrinsicElements {
+  if (tag && ALLOWED_TAGS.has(tag as keyof JSX.IntrinsicElements)) {
+    return tag as keyof JSX.IntrinsicElements;
+  }
+  return "div";
+}
+
+// ─── Node Renderer ────────────────────────────────────────────────────────────
 export function SlideNodeRenderer({
   node,
   selectedId,
@@ -25,9 +63,7 @@ export function SlideNodeRenderer({
   isEditing = false,
 }: NodeRendererProps) {
   const isSelected = selectedId === node.id;
-  const Tag = node.tag as keyof JSX.IntrinsicElements;
 
-  // ── wrapper کلاس برای حالت editor ──
   const editorWrapperClass = isEditing
     ? [
         "relative group/node outline outline-2 outline-offset-1 rounded-sm transition-all cursor-pointer",
@@ -37,7 +73,10 @@ export function SlideNodeRenderer({
       ].join(" ")
     : "";
 
-  // ── img self-closing ──
+  // FIX: always spread node.styles as inline style on every rendered element
+  const nodeStyle = (node.styles ?? {}) as React.CSSProperties;
+
+  // ── IMG ────────────────────────────────────────────────────────────────
   if (node.tag === "img") {
     return (
       <div
@@ -50,16 +89,19 @@ export function SlideNodeRenderer({
         {node.content ? (
           <img
             src={node.content}
-            alt={node.attributes?.alt ?? "image"}
+            alt={node.attributes?.alt ?? ""}
             className={node.className}
+            style={nodeStyle}
           />
         ) : (
-          // placeholder وقتی src نداره
           <div
-            className={`${node.className} flex items-center justify-center bg-slate-800 border-2 border-dashed border-slate-600 rounded-lg min-h-[120px]`}
+            className={clsx(
+              node.className,
+              "flex items-center justify-center bg-slate-800 border-2 border-dashed border-slate-600 rounded-lg min-h-[120px]",
+            )}
           >
             <span className="text-slate-500 text-sm">
-              🖼 Click properties to set image URL
+              Click properties to set image URL
             </span>
           </div>
         )}
@@ -67,7 +109,7 @@ export function SlideNodeRenderer({
     );
   }
 
-  // ── hr self-closing ──
+  // ── HR ─────────────────────────────────────────────────────────────────
   if (node.tag === "hr") {
     return (
       <div
@@ -77,13 +119,14 @@ export function SlideNodeRenderer({
           onSelect?.(node.id);
         }}
       >
-        <hr className={node.className} />
+        <hr className={node.className} style={nodeStyle} />
       </div>
     );
   }
 
-  // ── container با children (div، ul، ol) ──
+  // ── Container (children) ───────────────────────────────────────────────
   if (node.children !== undefined) {
+    const Tag = getSafeTag(node.tag);
     return (
       <div
         className={editorWrapperClass}
@@ -92,12 +135,11 @@ export function SlideNodeRenderer({
           onSelect?.(node.id);
         }}
       >
-        <Tag className={node.className}>
+        <Tag className={node.className} style={nodeStyle}>
           {node.children.length === 0 && isEditing ? (
-            // placeholder برای container خالی
             <div className="flex items-center justify-center min-h-[60px] border-2 border-dashed border-slate-700 rounded-lg">
               <span className="text-slate-600 text-xs">
-                Empty {node.tag} — add children from properties
+                Empty &lt;{node.tag}&gt; — add children from properties
               </span>
             </div>
           ) : (
@@ -117,8 +159,8 @@ export function SlideNodeRenderer({
     );
   }
 
-  // ── همه المنت‌های متنی ──
-  // contentEditable برای ویرایش مستقیم روی canvas
+  // ── Text / contentEditable canvas ──────────────────────────────────────
+  const Tag = getSafeTag(node.tag);
   return (
     <div
       className={editorWrapperClass}
@@ -133,7 +175,8 @@ export function SlideNodeRenderer({
     >
       <Tag
         className={node.className}
-        // فقط در editor قابل ویرایش مستقیم
+        // FIX: apply node.styles so fontFamily is visible in preview/export
+        style={nodeStyle}
         contentEditable={isEditing ? true : undefined}
         suppressContentEditableWarning
         onBlur={
@@ -142,7 +185,6 @@ export function SlideNodeRenderer({
                 onContentChange?.(node.id, e.currentTarget.textContent ?? "")
             : undefined
         }
-        // جلوگیری از رفتن به خط جدید با Enter
         onKeyDown={
           isEditing
             ? (e) => {
@@ -150,11 +192,15 @@ export function SlideNodeRenderer({
               }
             : undefined
         }
-        // attribute‌های اختیاری
-        {...(node.tag === "a" && node.attributes?.href
-          ? { href: node.attributes.href }
+        {...(node.tag === "a"
+          ? {
+              href: node.attributes?.href,
+              ...(node.attributes?.target
+                ? { target: node.attributes.target }
+                : {}),
+            }
           : {})}
-        {...(node.attributes?.target ? { target: node.attributes.target } : {})}
+        {...node.attributes}
       >
         {node.content}
       </Tag>
@@ -162,20 +208,7 @@ export function SlideNodeRenderer({
   );
 }
 
-// ─────────────────────────────────────────────
-// رندر کامل یه اسلاید
-// ─────────────────────────────────────────────
-
-interface SlideViewProps {
-  nodes: SlideNode[];
-  settings?: Partial<SlideSettings>;
-  // editor props — اگه نبود، حالت preview
-  selectedId?: string | null;
-  onSelect?: (id: string | null) => void;
-  onContentChange?: (id: string, content: string) => void;
-  isEditing?: boolean;
-}
-
+// ─── Slide View ───────────────────────────────────────────────────────────────
 export function SlideView({
   nodes,
   settings,
@@ -187,7 +220,6 @@ export function SlideView({
   const padding = settings?.padding ?? 32;
   const gap = settings?.gap ?? 16;
 
-  // ساخت background style
   const background =
     settings?.backgroundType === "gradient"
       ? `linear-gradient(${settings.gradientAngle ?? 135}deg, ${settings.gradientFrom}, ${settings.gradientTo})`
@@ -199,7 +231,6 @@ export function SlideView({
       style={{ background }}
       onClick={isEditing ? () => onSelect?.(null) : undefined}
     >
-      {/* محتوا */}
       <div
         className="relative w-full h-full flex flex-col"
         style={{ padding, gap }}
@@ -215,13 +246,12 @@ export function SlideView({
           />
         ))}
 
-        {/* وقتی canvas خالیه */}
         {nodes.length === 0 && isEditing && (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <p className="text-slate-600 text-sm mb-1">Canvas is empty</p>
               <p className="text-slate-700 text-xs">
-                ← Pick an element from the sidebar
+                Pick an element from the sidebar
               </p>
             </div>
           </div>
@@ -229,4 +259,9 @@ export function SlideView({
       </div>
     </div>
   );
+}
+
+// Helper used only inside this file — avoids importing clsx for a single use
+function clsx(...args: (string | false | null | undefined)[]) {
+  return args.filter(Boolean).join(" ");
 }

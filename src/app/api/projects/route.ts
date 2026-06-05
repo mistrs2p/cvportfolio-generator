@@ -47,21 +47,22 @@ export async function POST(req: Request) {
   return NextResponse.json(project, { status: 201 });
 }
 
-export async function DELETE(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const session = await auth();
-  if (!session)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function DELETE(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
 
-  const { id } = await params;
-
-  const project = await prisma.project.findUnique({ where: { id } });
-  if (!project || project.userId !== session.user.id) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!id) {
+    return NextResponse.json({ error: "id is required" }, { status: 400 });
   }
 
-  await prisma.project.delete({ where: { id } });
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  await prisma.project.delete({
+    where: { id, userId: session.user.id },
+  });
+
   return NextResponse.json({ success: true });
 }

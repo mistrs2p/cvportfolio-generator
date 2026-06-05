@@ -1,48 +1,53 @@
+// src/config/fonts.ts
 export const FONTS = [
-  // ─── English Fonts ───────────────────────────────────────
-  { id: "inter", label: "Inter", family: "Inter", lang: "en" as const },
-  { id: "satoshi", label: "Satoshi", family: "Satoshi", lang: "en" as const },
   {
-    id: "cabinet-grotesk",
-    label: "Cabinet Grotesk",
-    family: "Cabinet Grotesk",
-    lang: "en" as const,
+    id: "default",
+    label: "Default (inherit)",
+    family: "",
+    lang: "en",
+    googleUrl: null,
+  },
+  {
+    id: "inter",
+    label: "Inter",
+    family: "var(--font-inter)",
+    lang: "en",
+    googleUrl: null,
   },
   {
     id: "playfair",
     label: "Playfair Display",
-    family: "Playfair Display",
-    lang: "en" as const,
+    family: "var(--font-playfair-display)",
+    lang: "en",
+    googleUrl: null,
   },
   {
-    id: "instrument-serif",
-    label: "Instrument Serif",
-    family: "Instrument Serif",
-    lang: "en" as const,
+    id: "dm-sans",
+    label: "DM Sans",
+    family: "var(--font-dm-sans)",
+    lang: "en",
+    googleUrl: null,
   },
-
-  // ─── Persian Fonts ────────────────────────────────────────
-  { id: "sahel", label: "ساحل", family: "Sahel", lang: "fa" as const },
+  // فارسی‌ها (Vazirmatn و بقیه باید به همین شکل fix بشن اگه کار نمی‌کنن)
   {
     id: "vazirmatn",
     label: "وزیرمتن",
-    family: "Vazirmatn",
-    lang: "fa" as const,
+    family: "var(--font-vazirmatn)",
+    lang: "fa",
+    googleUrl: null,
   },
   {
-    id: "iran-yekan",
-    label: "ایران یکان",
-    family: "IRANYekan",
-    lang: "fa" as const,
+    id: "noto-sans-arabic",
+    label: "نوتو عربی",
+    family: "var(--font-noto-arabic)",
+    lang: "fa",
+    googleUrl: null,
   },
-  { id: "dana", label: "دانا", family: "Dana", lang: "fa" as const },
   {
-    id: "yekan-bakh",
-    label: "یکان بخ",
-    family: "YekanBakh",
-    lang: "fa" as const,
+    id: "scheherazade",
+    label: "شهرزاد",
+    family: "var(--font-scheherazade)",
+    lang: "fa",
+    googleUrl: null,
   },
 ] as const;
-
-export type FontId = (typeof FONTS)[number]["id"];
-export type FontLang = (typeof FONTS)[number]["lang"];
